@@ -20,17 +20,17 @@ package cloud
 
 import (
 	"github.com/admpub/log"
-	"github.com/admpub/nging/v5/application/handler"
-	"github.com/admpub/nging/v5/application/library/config"
-	"github.com/admpub/nging/v5/application/library/config/startup"
-	"github.com/admpub/nging/v5/application/model"
+	"github.com/coscms/webcore/library/config"
+	"github.com/coscms/webcore/library/config/startup"
+	"github.com/coscms/webcore/model"
+	"github.com/coscms/webcore/registry/route"
 	"github.com/webx-top/db"
 	"github.com/webx-top/echo"
 	"github.com/webx-top/echo/defaults"
 )
 
 func init() {
-	handler.RegisterToGroup(`/cloud`, func(g echo.RouteRegister) {
+	route.RegisterToGroup(`/cloud`, func(g echo.RouteRegister) {
 		g.Route(`GET,POST`, `/storage`, StorageIndex)
 		g.Route(`GET,POST`, `/storage_add`, StorageAdd)
 		g.Route(`GET,POST`, `/storage_edit`, StorageEdit)
@@ -56,13 +56,13 @@ func init() {
 		m := model.NewCloudBackup(ctx)
 		_, err := m.ListByOffset(nil, nil, 0, -1, db.Cond{`disabled`: `N`})
 		if err != nil {
-			log.Error(err)
+			log.Errorf(`failed to query cloud_backup list: %v`, err)
 			return
 		}
 		for _, row := range m.Objects() {
 			err = monitorBackupStart(*row)
 			if err != nil && err != ErrNotSupportMonitor {
-				log.Error(err)
+				log.Errorf(`failed to monitorBackupStart(%q): %v`, row.Name, err)
 			}
 		}
 	})

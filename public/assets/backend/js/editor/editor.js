@@ -8,10 +8,13 @@ App.loader.libs.editormdPreview = [
 ];
 App.loader.libs.codemirror = [
 	'#editor/markdown/lib/codemirror/codemirror.min.css',
+	'#editor/markdown/lib/codemirror/addon/fold/foldgutter.css',
+	'#editor/markdown/lib/codemirror/addon/hint/show-hint.css',
 	'#editor/markdown/lib/codemirror/theme/ambiance.css',
 	'#editor/markdown/lib/codemirror/codemirror.min.js', 
-	'#editor/markdown/lib/codemirror/mode/meta.min.js',
-	'#editor/markdown/lib/codemirror/addon/mode/loadmode.js'
+	'#editor/markdown/lib/codemirror/modes.min.js', 
+	'#editor/markdown/lib/codemirror/addons.min.js',
+	'#editor/markdown/lib/codemirror/addon/hint/show-hint.js'
 ];
 App.loader.libs.editormd = ['#editor/markdown/css/editormd.min.css', '#editor/markdown/css/editormd.preview.min.css', '#editor/markdown/editormd.min.js'];
 App.loader.libs.flowChart = ['#editor/markdown/lib/flowchart.min.js'];
@@ -49,7 +52,7 @@ App.loader.libs.inputmask = ['#inputmask/inputmask.min.js','#inputmask/jquery.in
 App.loader.libs.clipboard = ['#clipboard/clipboard.min.js','#clipboard/utils.js'];
 
 App.editor = {
-	browsingFileURL: App.loader.siteURL + (typeof (window.IS_BACKEND) !== 'undefined' && window.IS_BACKEND ? '' : '/user/file') + '/finder'
+	browsingFileURL: App.loader.siteURL + (typeof (window.IS_BACKEND) !== 'undefined' && window.IS_BACKEND ? BACKEND_URL : FRONTEND_URL+'/user/file') + '/finder'
 };
 App.editor.loadingOverlay = function (options) {
 	App.loader.defined(typeof ($.fn.LoadingOverlay), 'loadingOverlay');
@@ -59,6 +62,23 @@ App.editor.dialog = function (options) {
 	App.loader.defined(typeof (BootstrapDialog), 'dialog');
 	return BootstrapDialog.show(options||{});
 };
+App.editor.contypeAttachers = {};
+App.editor.contypeAttachers.markdown = function(obj){App.editor.markdownToHTML(obj);};
+App.editor.contypeAttachers.html = function(obj){
+	var $code=$(obj).find('pre[class^=language-]');
+	if($code.length>0)App.editor.codeHighlight($code);
+};
+App.editor.attachContype = function(container,callback){
+    var $container=container?$(container):$(document);
+    $container.find('[data-contype]:not([contype-attached])').each(function(){
+        $(this).attr('contype-attached','1');
+        var contype=$(this).data('contype');
+		if(typeof(App.editor.contypeAttachers[contype])!='undefined'){
+			App.editor.contypeAttachers[contype](this);
+			callback && callback.apply(this,arguments);
+		}
+    })
+}
 /*/ =================================================================
 // ueditor
 // =================================================================
@@ -95,6 +115,7 @@ App.editor.ueditor = function (editorElement, uploadUrl, options) {
 	$(editorElement).data('editor-object', editor);
 };
 */
+
 // =================================================================
 // editormd
 // =================================================================
@@ -159,9 +180,16 @@ App.editor.markdownToHTML = function (elem, markdownData, options) {
 	var loadingId = 'markdown-render-processing-'+ App.utils.unixtime();
 	var loadingHTML = '<div id="'+loadingId+'"><i class="fa fa-spinner fa-spin fa-3x"></i></div>';
 	if (markdownData == null || typeof (markdownData) == 'boolean') {
-		var isContainer = markdownData, box = $(elem);
-		if (isContainer != false) box = $(elem).find('.markdown-code');
-		box.first().before(loadingHTML);
+		var box = $(elem), isSelf = $(elem).hasClass('markdown-code');
+		if (!markdownData && !isSelf) {
+			box = $(elem).find('.markdown-code');
+			if(box.length<1) return;
+		}
+		if (isSelf){
+			box.prepend(loadingHTML);
+		}else{
+			box.first().before(loadingHTML);
+		}
 		init(options,function(params){
 			box.each(function () {
 				if($(this).children('textarea').length>0){
@@ -249,7 +277,12 @@ App.editor.markdown = function (editorElement, uploadUrl, options) {
 		crossDomainUpload: true,
 		uploadCallbackURL: path + 'plugins/image-dialog/upload_callback.htm',
 		dialogLockScreen: false,
-		onload: function () { }
+		onload: function () {
+			var editor=this;
+			editormd.loadPlugin(path+"plugins/drop-or-paste-upload/drop-or-paste-upload.min", function(){
+				editor.dropOrPasteUpload();
+			});
+		}
 	};
 	if (typeof(window.THEME_COLOR)=='string'&&window.THEME_COLOR=='dark') {
 		defaults.theme = "dark"; // ambiance
@@ -429,7 +462,7 @@ App.editor.tinymce = function (elem, uploadUrl, options, useSimpleToolbar) {
 		managerUrl += 'from=parent&client=tinymce&filetype=';
 	}
 	var simpleToolbar = 'undo redo | formatselect | bold italic backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | customDateButton';
-	var fullToolbar = 'undo redo | bold italic underline strikethrough | fontselect fontsizeselect formatselect | alignleft aligncenter alignright alignjustify | outdent indent |  numlist bullist | forecolor backcolor removeformat | pagebreak | charmap emoticons | fullscreen  preview save print | insertfile image media template link anchor codesample | ltr rtl | customDateButton';
+	var fullToolbar = 'undo redo | bold italic underline strikethrough | fontselect fontsizeselect formatselect | alignleft aligncenter alignright alignjustify | outdent indent | numlist bullist | forecolor backcolor removeformat | pagebreak | charmap emoticons | fullscreen preview save print | insertfile image media template link anchor codesample | ltr rtl | customDateButton';
 	var filePickerCallback = function (callback, value, meta) {
 		switch (meta.filetype) {
 			case 'file': //Provide file and text for the link dialog
@@ -558,7 +591,11 @@ App.editor.tinymce = function (elem, uploadUrl, options, useSimpleToolbar) {
 		defaults.content_css= "dark";
 	}
 	if (managerUrl) defaults.file_picker_callback = filePickerCallback;
-	if (uploadUrl) defaults.images_upload_handler = imagesUploadHandler;
+	if (uploadUrl) {
+		defaults.paste_data_images = true;
+		defaults.urlconverter_callback = function(url, node, on_save, name) {return url;};
+		defaults.images_upload_handler = imagesUploadHandler;
+	}
 	var id = App.utils.elemToId(elem).replace(/^#/,'');
 	//see document: https://www.tiny.cloud/docs/integrations/jquery/
 	$(elem).tinymce($.extend({}, defaults, options || {}));
@@ -578,9 +615,9 @@ App.editor.switcher = function(swicherElem, contentElem, defaultEditorName) {
 			event = 'click';
 	}
 	$(swicherElem).on(event, function(){
-		var etype=$(this).val();
+		var etype=$(this).val()||$(this).attr('value');
 		var texta=$(contentElem);
-		var editorName=$(this).data('editor-name') || defaultEditorName;
+		var editorName=texta.data('editor-name') || defaultEditorName;
 		texta.data("editor-type",etype);
 		return App.editor.switch(editorName, texta);
 	});
@@ -589,8 +626,11 @@ App.editor.switcher = function(swicherElem, contentElem, defaultEditorName) {
 		case 'input':
 			$(swicherElem).filter(':checked').first().trigger(event);
 			break;
+		case 'select':
+			$(swicherElem).filter(':selected').first().trigger(event);
+			break;
 		default:
-			$(swicherElem).trigger(event);
+			$(swicherElem).filter('.active').first().trigger(event);
 	}
 };
 
@@ -691,7 +731,8 @@ App.editor.switch = function (editorName, texta, cancelFn, tips) {
 		case 'text':
 			removeHTMLEditor();
 			removeMarkdownEditor();
-			texta.show().focus();
+			texta.show();
+			if(texta.prop('autofocus')) texta.focus();
 			//texta.attr('placeholder', texta.data('placeholder') || '');
 			texta.data("current-editor-type", etype);
 			break;
@@ -892,38 +933,52 @@ App.editor.fileInput = function (elem, options, successCallback, errorCallback) 
 		});
 	});
 };
-App.editor.codemirror = function (elem,options,loadMode) {
+App.editor.codemirror = function (elem,options,loadLangType) {
 	if($(elem).length<1) return null;
 	var init = function(){
 		if($(elem).data('codemirror'))return;
 		var defaults = {
 			lineNumbers: true,
 			lineWrapping: true,
+			lineWrapping: true,
+			gutters:["CodeMirror-linenumbers", "CodeMirror-foldgutter"],
+			autoCloseTags: true,
+			autoCloseBrackets: true,
+			showTrailingSpace: true,
+			indentWithTabs: true,
+			matchBrackets: true,
+			styleActiveLine: true,
+			styleSelectedText: true,
+			highlightSelectionMatches : true,
+			smartIndent: true,
 			mode: "text/x-csrc",
 			width: null,
-			height: null
+			height: null,
+			hintOptions: {completeSingle: false}
 		};
 		var option = $.extend(defaults, options || {});
 		var editor = $(elem)[0].tagName.toUpperCase()=='TEXTAREA' ? CodeMirror.fromTextArea($(elem)[0], option) : CodeMirror($(elem)[0], option);
 		//editor.setSize('auto', 'auto');
-		if(!loadMode){
-			switch(option.mode){
-				case "text/x-csrc": loadMode = "clike";break;
-				case "text/css": loadMode = "css";break;
-				case "text/x-mysql": loadMode = "sql";break;
-				case "text/x-mssql": loadMode = "sql";break;
-				case "text/x-markdown": loadMode = "markdown";break;
-				case "text/x-yaml": loadMode = "yaml";break;
-				case "text/javascript": loadMode = "javascript";break;
-				case "text/json": loadMode = "javascript";break;
-				default: if(typeof(CodeMirror.modeInfo)!=='undefined'){
+		var mime = option.mode, mime2type = {"text/x-csrc":"clike","text/css":"css","text/x-mysql":"sql","text/x-mssql":"sql","text/x-markdown":"markdown","text/x-yaml":"yaml","text/x-toml":"toml","text/javascript":"javascript","application/javascript":"javascript","text/json":"javascript","text/html":"html","message/http":"http","null":"null"};
+		if(loadLangType && typeof(loadLangType)=='object') {
+			mime2type = $.extend(mime2type,loadLangType);
+			loadLangType = null;
+		}
+		if(!loadLangType){
+			if(option.mode in mime2type){
+				loadLangType=mime2type[option.mode];
+			}else{
+				if(typeof(CodeMirror.modeInfo)!=='undefined'){
 					for(var i = 0; i < CodeMirror.modeInfo.length; i++){
 						var v = CodeMirror.modeInfo[i];
 						if(v.mime == option.mode || v.mode == option.mode){
-							loadMode = v.mode;
+							loadLangType = v.mode;
+							mime = v.mime;
 							break;
 						}
 					}
+				}else{
+					loadLangType = "null";
 				}
 			}
 		}
@@ -932,7 +987,48 @@ App.editor.codemirror = function (elem,options,loadMode) {
 			if(!option.height) option.height='auto';
 			editor.setSize(option.width, option.height);
 		}
-		if(loadMode) CodeMirror.autoLoadMode(editor, loadMode);
+		if(loadLangType) {
+			editor.setOption("mode", mime);
+			if(typeof(option.readOnly)=='undefined'||!option.readOnly){
+				var loadHint='',loadLint='';
+				switch(loadLangType){
+					case 'css':
+					case 'html':
+					case 'javascript':
+					case 'sql':
+					case 'xml':
+						loadHint=loadLangType;
+				}
+				switch(loadLangType){
+					case 'css':
+					case 'json':
+					case 'javascript':
+					case 'coffeescript':
+					case 'yaml':
+						loadLint=loadLangType;
+				}
+				if(loadHint && (!CodeMirror.helpers.hasOwnProperty('hint') || !CodeMirror.helpers.hint.hasOwnProperty(loadHint))){
+					loadHint='#editor/markdown/lib/codemirror/addon/hint/'+loadHint+'-hint.js';
+					if(loadLangType=='html'){
+						App.loader.includes('#editor/markdown/lib/codemirror/addon/hint/xml-hint.js', true, function(){
+							App.loader.includes(loadHint, true);
+						});
+					}else{
+						App.loader.includes(loadHint, true);
+					}
+				}
+				if(loadLint && (!CodeMirror.helpers.hasOwnProperty('lint') || !CodeMirror.helpers.lint.hasOwnProperty(loadLint))){
+					loadLint='#editor/markdown/lib/codemirror/addon/lint/'+loadLint+'-lint.js';
+					App.loader.includes([
+						'#editor/markdown/lib/codemirror/addon/lint/lint.css',
+						'#editor/markdown/lib/codemirror/addon/lint/lint.js'
+					], true, function(){
+						App.loader.includes(loadLint, true);
+					});
+				}
+			}
+		}
+        editor.on('keypress', function(){if(typeof(editor.showHint)=='function')editor.showHint();});
 		$(elem).data('codemirror',editor);
 	};
 	App.loader.defined(typeof (CodeMirror), 'codemirror', init, function(){
@@ -988,7 +1084,7 @@ App.editor.dropzone = function (elem,options,onSuccss,onError,onRemove) {
 		var sep = options.url.indexOf('?')>=0?'&':'?';
 		options.url += sep+'client=dropzone';
 	}
-	var d = $(elem).dropzone($.extend({
+	var d = App.getJQueryObject(elem).dropzone($.extend({
 	    paramName: "file", maxFilesize: 0.5, // MB
 		//addRemoveLinks : true,
 		acceptedFiles: 'image/*',
@@ -1037,7 +1133,7 @@ App.editor.datePicker = function(elem, options){
 	App.loader.defined(typeof (App.daterangepicker), 'dateRangePicker');
 	return App.datepicker(elem, options);
 };
-App.editor.popup = function(elem,options){
+App.editor.popup = function(elem,options,callback){
 	if(elem == null) elem = '.image-zoom';
 	var defaults = {
         type: 'image',
@@ -1053,12 +1149,20 @@ App.editor.popup = function(elem,options){
         }
     };
 	App.loader.defined(typeof ($.fn.magnificPopup), 'magnificPopup', function(){
-		$(elem).magnificPopup($.extend(defaults, options||{}));
+		App.getJQueryObject(elem).magnificPopup($.extend(defaults, options||{}));
+		callback && callback();
 	});
+};
+App.editor.galleryPopup = function(elem,options,callback){
+	var defaults={
+		closeBtnInside: false, zoom: {opener: null},
+		gallery: {enabled: true, navigateByImgClick: true}
+	};
+	App.editor.popup(elem,$.extend(defaults,options||{}),callback);
 };
 App.editor.inputmask = function(elem,options) {
 	App.loader.defined(typeof ($.fn.inputmask), 'inputmask',function(){
-		$(elem).inputmask(options);
+		App.getJQueryObject(elem).inputmask(options);
 	});
 }
 App.editor.clipboard = function(elem,options) {

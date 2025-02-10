@@ -34,12 +34,15 @@ import (
 
 	"github.com/admpub/errors"
 	"github.com/admpub/log"
-	"github.com/admpub/nging/v5/application/handler"
-	"github.com/admpub/nging/v5/application/library/common"
-	"github.com/admpub/nging/v5/application/library/config"
-	"github.com/admpub/nging/v5/application/model"
-	"github.com/admpub/nging/v5/application/registry/settings"
-	"github.com/admpub/nging/v5/application/request"
+	"github.com/coscms/webcore/cmd/bootconfig"
+	"github.com/coscms/webcore/library/backend"
+	"github.com/coscms/webcore/library/common"
+	"github.com/coscms/webcore/library/config"
+	"github.com/coscms/webcore/library/license"
+	"github.com/coscms/webcore/library/nsql"
+	"github.com/coscms/webcore/model"
+	"github.com/coscms/webcore/registry/settings"
+	"github.com/coscms/webcore/request"
 )
 
 type ProgressInfo struct {
@@ -98,16 +101,8 @@ var (
 		TotalSize: 1,
 	}
 
-	onInstalled        []func(ctx echo.Context) error
 	RegisterInstallSQL = config.RegisterInstallSQL
 )
-
-func OnInstalled(cb func(ctx echo.Context) error) {
-	if cb == nil {
-		return
-	}
-	onInstalled = append(onInstalled, cb)
-}
 
 func Progress(ctx echo.Context) error {
 	data := ctx.Data()
@@ -127,10 +122,10 @@ func Progress(ctx echo.Context) error {
 	return ctx.JSON(data)
 }
 
-func install(ctx echo.Context, sqlFile string, isFile bool, charset string, installer func(string) error) (err error) {
-	installFunction := common.SQLLineParser(func(sqlStr string) error {
+func install(_ echo.Context, sqlFile string, isFile bool, charset string, installer func(string) error) (err error) {
+	installFunction := nsql.SQLLineParser(func(sqlStr string) error {
 		strLen := len(sqlStr)
-		sqlStr = common.ReplaceCharset(sqlStr, charset, true)
+		sqlStr = nsql.ReplaceCharset(sqlStr, charset, true)
 		err := installer(sqlStr)
 		installProgress.Done(int64(strLen))
 		return err
@@ -279,11 +274,8 @@ func Setup(ctx echo.Context) error {
 			return ctx.NewError(stdCode.Failure, err.Error())
 		}
 
-		for _, cb := range onInstalled {
-			log.Info(color.GreenString(`[installer]`), `Execute Hook: `, com.FuncName(cb))
-			if err = cb(ctx); err != nil {
-				return ctx.NewError(stdCode.Failure, err.Error())
-			}
+		if err = backend.FireInstalled(ctx); err != nil {
+			return err
 		}
 
 		// 生成锁文件
@@ -313,28 +305,38 @@ func Setup(ctx echo.Context) error {
 			return err
 		}
 
-		// 启动
-		log.Info(color.GreenString(`[installer]`), `Start up`)
-		config.FromCLI().RunStartup()
+		if !requestData.FromCLI() {
+			log.Info(color.GreenString(`[installer]`), `Start up`)
+			config.FromCLI().RunStartup() // 启动
+		} else {
+			config.FromCLI().ParseConfig()
+		}
 
 		// 升级
 		if err := Upgrade(); err != nil && os.ErrNotExist != err {
-			log.Error(err)
+			log.Errorf(`failed to Upgrade: %v`, err)
 		}
 
 		if ctx.IsAjax() {
 			data.SetInfo(ctx.T(`安装成功`)).SetData(installProgress)
 			return ctx.JSON(data)
 		}
-		handler.SendOk(ctx, ctx.T(`安装成功`))
-		return ctx.Redirect(handler.URLFor(`/`))
+		common.SendOk(ctx, ctx.T(`安装成功`))
+		return ctx.Redirect(backend.URLFor(`/`))
 	}
 	if requestData == nil {
 		requestData = &request.Setup{}
 	}
 	ctx.Set(`data`, requestData)
+	ctx.Set(`defaultDBName`, license.ProductName())
 	ctx.Set(`dbEngines`, config.DBEngines.Slice())
-	return ctx.Render(`setup`, handler.Err(ctx, err))
+	ctx.SetFunc(`policy`, func() echo.KVList {
+		if bootconfig.Policy == nil {
+			return echo.KVList{}
+		}
+		return bootconfig.Policy()
+	})
+	return ctx.Render(`setup`, common.Err(ctx, err))
 }
 
 func createDatabase(err error) error {

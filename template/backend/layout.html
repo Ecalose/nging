@@ -51,10 +51,10 @@
 	<meta name="buildTime" content="{{BuildTime}}">
 	<meta name="commitID" content="{{CommitID}}">
 	<meta name="robots" content="noindex,nofollow">
-	<link rel="shortcut icon" type="image/x-icon" href="/favicon.ico">
+	<link rel="shortcut icon" type="image/x-icon" href="{{$.RootPrefix}}/favicon.ico">
 	<title>{{Block "title"}}Start{{/Block}} - {{Version}}</title>
 	<!-- Bootstrap core CSS -->
-	<link rel="stylesheet" href="{{AssetsURL}}/js/bootstrap/dist/css/bootstrap.min.css?t={{BuildTime}}" />
+	<link rel="stylesheet" href="{{AssetsURL}}/js/bootstrap/dist/css/bootstrap.lite.min.css?t={{BuildTime}}" />
 	<link rel="stylesheet" href="{{AssetsURL}}/js/jquery.gritter/css/jquery.gritter.min.css?t={{BuildTime}}" />
 	<link rel="stylesheet" href="{{AssetsURL}}/js/jquery.gritter/css/custom.min.css?t={{BuildTime}}" />
   <link rel="stylesheet" href="{{AssetsURL}}/js/jquery.nanoscroller/nanoscroller.css?t={{BuildTime}}" />
@@ -63,15 +63,11 @@
 	<link rel="stylesheet" href="{{AssetsURL}}/js/bootstrap.typeahead/typeahead.css?t={{BuildTime}}" />
 	<link rel="stylesheet" href="{{AssetsURL}}/css/form/checkbox.min.css?t={{BuildTime}}" />
 	{{Include "global_js"}}
-	{{- range $k,$head := call $.Func.GlobalHeads -}}
-	{{- if $head -}}
-	{{- if $head.Tmpl}}{{$.Fetch $head.Tmpl $}}{{end -}}
-	{{- end -}}
-	{{- end -}}
+	{{- $.Render (call $.Func.GlobalHeads) -}}
     {{Block "head"}}{{/Block}}
 	<link id="css-lazyload-end" rel="stylesheet" href="{{AssetsURL}}/css/reset.css?t={{BuildTime}}" />
 	<!-- Custom styles for this template -->
-	<link href="{{AssetsURL}}/css/style.min.css?t={{BuildTime}}" rel="stylesheet" />
+	<link href="{{AssetsURL}}/css/style.lite.min.css?t={{BuildTime}}" rel="stylesheet" />
 	{{- if eq $themeColor `dark` -}}
 	<link href="{{AssetsURL}}/css/dark.min.css?t={{BuildTime}}" rel="stylesheet" />
 	{{- end -}}
@@ -119,18 +115,14 @@
 <script type="text/javascript" src="{{AssetsURL}}/js/bootstrap/dist/js/bootstrap.min.js?t={{BuildTime}}"></script>
 <script type="text/javascript" src="{{AssetsURL}}/js/storeWithJson2.min.js?t={{BuildTime}}"></script>
 <script type="text/javascript" src="{{AssetsURL}}/js/bootstrap.typeahead/typeahead.bundle.min.js?t={{BuildTime}}"></script>
-<script type="text/javascript" src="{{BackendURL}}/i18n.js?t={{BuildTime}}" charset="utf-8"></script>
+<script type="text/javascript" src="{{BackendURL}}/i18n/i18n.js?t={{BuildTime}}" charset="utf-8"></script>
 <script type="text/javascript" src="{{AssetsURL}}/js/jquery.parsley/parsley.min.js?t={{BuildTime}}"></script>
 <script type="text/javascript" src="{{AssetsURL}}/js/jquery.parsley/i18n/{{$.Lang.Format false `_`}}.js?t={{BuildTime}}" charset="utf-8"></script>
 {{Block "importJS"}}{{/Block}}
 {{Include "init_js"}}
 {{call $.Func.Modal "__TMPL__/manager/upgrade.yaml"}}
 <script type="text/javascript" src="{{AssetsURL}}/js/behaviour/page/footer.min.js?t={{BuildTime}}"></script>
-{{- range $k,$footer := call $.Func.GlobalFooters -}}
-{{- if $footer -}}
-{{- if $footer.Tmpl}}{{$.Fetch $footer.Tmpl $}}{{end -}}
-{{- end -}}
-{{- end -}}
+{{- $.Render (call $.Func.GlobalFooters) -}}
 {{Block "footer"}}{{/Block}}
 <div id="loading-status"><i class="fa fa-spinner fa-spin fa-3x"></i></div>
 {{TrackerHTML}}

@@ -6,14 +6,14 @@ import (
 	"github.com/webx-top/echo/param"
 	"github.com/webx-top/echo/subdomains"
 
-	"github.com/admpub/nging/v5/application/dbschema"
-	"github.com/admpub/nging/v5/application/library/config"
-	"github.com/admpub/nging/v5/application/model"
-	"github.com/admpub/nging/v5/application/model/file/storer"
-	"github.com/admpub/nging/v5/application/registry/settings"
-	"github.com/admpub/nging/v5/application/registry/upload/driver"
-	"github.com/admpub/nging/v5/application/registry/upload/driver/local"
-	"github.com/admpub/nging/v5/application/registry/upload/driver/s3"
+	"github.com/coscms/webcore/dbschema"
+	"github.com/coscms/webcore/library/config"
+	"github.com/coscms/webcore/model"
+	"github.com/coscms/webcore/model/file/storer"
+	"github.com/coscms/webcore/registry/settings"
+	"github.com/coscms/webcore/registry/upload/driver"
+	"github.com/coscms/webcore/registry/upload/driver/local"
+	"github.com/coscms/webcore/registry/upload/driver/s3"
 
 	"github.com/webx-top/image"
 )
@@ -22,7 +22,7 @@ var configDefaults = map[string]map[string]*dbschema.NgingConfig{
 	`base`: {
 		`storer`: {
 			Key:         `storer`,
-			Label:       `存储引擎`,
+			Label:       echo.T(`存储引擎`),
 			Description: ``,
 			Value:       `{"name": "local", "id": ""}`,
 			Group:       `base`,
@@ -32,7 +32,7 @@ var configDefaults = map[string]map[string]*dbschema.NgingConfig{
 		},
 		`watermark`: {
 			Key:         `watermark`,
-			Label:       `图片水印`,
+			Label:       echo.T(`图片水印`),
 			Description: ``,
 			Value:       `{"watermark": "/public/assets/backend/images/nging-gear.png", "type": "image", "position": 0, "padding": 0, "on": true}`,
 			Group:       `base`,
@@ -44,7 +44,7 @@ var configDefaults = map[string]map[string]*dbschema.NgingConfig{
 	`captcha`: {
 		`type`: {
 			Key:         `type`,
-			Label:       `验证码类型`,
+			Label:       echo.T(`验证码类型`),
 			Description: ``,
 			Value:       ``,
 			Group:       `captcha`,
@@ -54,7 +54,17 @@ var configDefaults = map[string]map[string]*dbschema.NgingConfig{
 		},
 		`api`: {
 			Key:         `api`,
-			Label:       `第三方验证码接口设置`,
+			Label:       echo.T(`第三方验证码接口设置`),
+			Description: ``,
+			Value:       ``,
+			Group:       `captcha`,
+			Type:        `json`,
+			Sort:        30,
+			Disabled:    `N`,
+		},
+		`go`: {
+			Key:         `go`,
+			Label:       echo.T(`行为验证码`),
 			Description: ``,
 			Value:       ``,
 			Group:       `captcha`,
@@ -85,8 +95,8 @@ func init() {
 		})
 	}
 	settings.Register(&settings.SettingForm{
-		Short:    `验证码设置`,
-		Label:    `验证码设置`,
+		Short:    echo.T(`验证码设置`),
+		Label:    echo.T(`验证码设置`),
 		Group:    `captcha`,
 		Tmpl:     []string{`manager/settings/captcha`},
 		FootTmpl: []string{`manager/settings/captcha_footer`},

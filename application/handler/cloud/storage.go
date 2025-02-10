@@ -22,21 +22,22 @@ import (
 	"github.com/webx-top/db"
 	"github.com/webx-top/echo"
 
-	"github.com/admpub/nging/v5/application/handler"
-	"github.com/admpub/nging/v5/application/library/common"
-	"github.com/admpub/nging/v5/application/model"
+	"github.com/coscms/webcore/library/backend"
+	"github.com/coscms/webcore/library/common"
+	"github.com/coscms/webcore/library/nsql"
+	"github.com/coscms/webcore/model"
 )
 
 func StorageIndex(ctx echo.Context) error {
 	m := model.NewCloudStorage(ctx)
 	cond := db.Compounds{}
-	common.SelectPageCond(ctx, &cond)
+	nsql.SelectPageCond(ctx, &cond)
 	_, err := common.NewLister(m, nil, func(r db.Result) db.Result {
 		return r.OrderBy(`-id`)
 	}, cond.And()).Paging(ctx)
 	list := m.Objects()
 	ctx.Set(`listData`, list)
-	return ctx.Render(`cloud/storage`, handler.Err(ctx, err))
+	return ctx.Render(`cloud/storage`, common.Err(ctx, err))
 }
 
 func StorageAdd(ctx echo.Context) error {
@@ -55,8 +56,8 @@ func StorageAdd(ctx echo.Context) error {
 		if err != nil {
 			goto END
 		}
-		handler.SendOk(ctx, ctx.T(`操作成功`))
-		return ctx.Redirect(handler.URLFor(`/cloud/storage`))
+		common.SendOk(ctx, ctx.T(`操作成功`))
+		return ctx.Redirect(backend.URLFor(`/cloud/storage`))
 	}
 	id = ctx.Formx(`copyId`).Uint()
 	if id > 0 {
@@ -92,8 +93,8 @@ func StorageEdit(ctx echo.Context) error {
 		if err != nil {
 			goto END
 		}
-		handler.SendOk(ctx, ctx.T(`操作成功`))
-		return ctx.Redirect(handler.URLFor(`/cloud/storage`))
+		common.SendOk(ctx, ctx.T(`操作成功`))
+		return ctx.Redirect(backend.URLFor(`/cloud/storage`))
 	}
 	if err == nil {
 		echo.StructToForm(ctx, m.NgingCloudStorage, ``, func(topName, fieldName string) string {
@@ -113,10 +114,10 @@ func StorageDelete(ctx echo.Context) error {
 	m := model.NewCloudStorage(ctx)
 	err := m.Delete(nil, db.Cond{`id`: id})
 	if err == nil {
-		handler.SendOk(ctx, ctx.T(`操作成功`))
+		common.SendOk(ctx, ctx.T(`操作成功`))
 	} else {
-		handler.SendFail(ctx, err.Error())
+		common.SendFail(ctx, err.Error())
 	}
 
-	return ctx.Redirect(handler.URLFor(`/cloud/storage`))
+	return ctx.Redirect(backend.URLFor(`/cloud/storage`))
 }

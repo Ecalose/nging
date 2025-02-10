@@ -1,7 +1,7 @@
 {{Strip}}<!-- Modal -->
 {{with $.Data}}
 {{- if not .HeadTitle -}}
-<div class="modal{{if .Animate}} {{.Animate}}{{else}} fade{{end}}" id="{{.Id}}" tabindex="-1" role="dialog">
+<div class="modal{{if .Animate}} {{.Animate}}{{else}} fade{{end}}{{if .Full}} modal-full{{end}}" id="{{.Id}}" tabindex="-1" role="dialog">
 	<div class="modal-dialog">
 	  <div class="modal-content">
 		<div class="modal-header">
@@ -13,7 +13,7 @@
      		{{.Content|$.T|ToHTML}}
      {{- else -}}
 			<div class="text-center">
-				<div class="i-circle {{if .Type}}{{.Type}}{{else}}primary{{end}}"><i class="fa fa-{{if .Type}}{{.Type}}{{else}}primary{{end}}"></i></div>
+				<div class="i-circle {{if .Type}}{{.Type}}{{else}}primary{{end}}"><i class="fa {{if .Type}}fa-{{.Type}}{{else}}fa-primary{{end}}"></i></div>
 				{{if .Title}}<h4>{{.Title|$.T|ToHTML}}</h4>{{end}}
 				<p>{{.Content|$.T|ToHTML}}</p>
 			</div>
@@ -26,8 +26,12 @@
       {{- range $k, $v := .ExtButtons -}}
 		  <button type="button" data-dismiss="modal"{{range $bk, $bv := $v.Attributes}} {{$bv.Attr|ToHTMLAttr}}="{{$bv.Value}}"{{else}} class="btn btn-default"{{end}}>{{$v.Text}}</button>
       {{- end -}}
-		  <button type="button" class="btn btn-default" data-dismiss="modal">{{"取消"|$.T}}</button>
-		  <button type="button" class="btn btn-{{if .Type}}{{.Type}}{{else}}primary{{end}}" data-dismiss="modal">{{"确定"|$.T}}</button>
+	  	{{- if not .ButtonCancel.Disabled -}}
+		  <button type="button"{{range $bk, $bv := .ButtonCancel.Attributes}} {{$bv.Attr|ToHTMLAttr}}="{{$bv.Value}}"{{else}} class="btn btn-default"{{end}}{{if not .ButtonCancel.DisableClose}} data-dismiss="modal"{{end}}>{{if .ButtonCancel.Text}}{{.ButtonCancel.Text|$.T}}{{else}}{{"取消"|$.T}}{{end}}</button>
+		  {{- end -}}
+		  {{- if not .ButtonSubmit.Disabled -}}
+		  <button type="button"{{range $bk, $bv := .ButtonSubmit.Attributes}} {{$bv.Attr|ToHTMLAttr}}="{{$bv.Value}}"{{else}} class="btn {{if .Type}}btn-{{.Type}}{{else}}btn-primary{{end}}"{{end}}{{if not .ButtonSubmit.DisableClose}} data-dismiss="modal"{{end}}>{{if .ButtonSubmit.Text}}{{.ButtonSubmit.Text|$.T}}{{else}}{{"确定"|$.T}}{{end}}</button>
+		  {{- end -}}
 		</div>
 	  </div><!-- /.modal-content -->
 	
@@ -36,18 +40,18 @@
 
 {{- else -}}
 
-<div class="md-modal {{if eq .ContentType "blackform"}}md-dark custom-width{{else}}colored-header{{end}} {{.Type}}{{if .Animate}} {{.Animate}}{{else}} md-effect-10{{end}}" id="{{.Id}}">
+<div class="md-modal {{if eq .ContentType `blackform`}}md-dark custom-width{{else}}colored-header{{end}} {{.Type}}{{if .Animate}} {{.Animate}}{{else}} md-effect-10{{end}}{{if .Full}} md-modal-full{{end}}" id="{{.Id}}">
     <div class="md-content">
       <div class="modal-header">
         <h3>{{.HeadTitle|$.T|ToHTML}}<span class="modal-subtitle"></span></h3>
         <button type="button" class="close md-close" data-dismiss="modal" aria-hidden="true">&times;</button>
       </div>
-      <div class="modal-body{{if or (eq .ContentType "blackform") (eq .ContentType "form")}} form{{end}}">
+      <div class="modal-body{{if eq .ContentType `blackform` `form`}} form{{end}}">
 		{{- if .Custom -}}
             {{.Content|$.T|ToHTML}}
         {{- else -}}
         <div class="text-center">
-          <div class="i-circle {{if .Type}}{{.Type}}{{else}}primary{{end}}"><i class="fa fa-{{if .Type}}{{.Type}}{{else}}primary{{end}}"></i></div>
+          <div class="i-circle {{if .Type}}{{.Type}}{{else}}primary{{end}}"><i class="fa {{if .Type}}fa-{{.Type}}{{else}}fa-primary{{end}}"></i></div>
          	{{if .Title}}<h4>{{.Title|$.T|ToHTML}}</h4>{{end}}
           <p>{{.Content|$.T|ToHTML}}</p>
         </div>
@@ -60,8 +64,12 @@
 		{{- range $k, $v := .ExtButtons -}}
 		  <button type="button" data-dismiss="modal"{{range $bk, $bv := $v.Attributes}} {{$bv.Attr|ToHTMLAttr}}="{{$bv.Value}}"{{else}} class="btn btn-default"{{end}}>{{$v.Text}}</button>
         {{- end -}}
-        <button type="button" class="btn btn-default btn-flat md-close" data-dismiss="modal">{{"取消"|$.T}}</button>
-        <button type="button" class="btn btn-{{if .Type}}{{.Type}}{{else}}primary{{end}} btn-flat md-close" data-dismiss="modal">{{"确定"|$.T}}</button>
+		{{- if not .ButtonCancel.Disabled -}}
+        <button type="button"{{range $bk, $bv := .ButtonCancel.Attributes}} {{$bv.Attr|ToHTMLAttr}}="{{$bv.Value}}"{{else}} class="btn btn-default btn-flat{{if not .ButtonCancel.DisableClose}} md-close{{end}}"{{end}}{{if not .ButtonCancel.DisableClose}} data-dismiss="modal"{{end}}>{{if .ButtonCancel.Text}}{{.ButtonCancel.Text|$.T}}{{else}}{{"取消"|$.T}}{{end}}</button>
+        {{- end -}}
+		{{- if not .ButtonSubmit.Disabled -}}
+        <button type="button"{{range $bk, $bv := .ButtonSubmit.Attributes}} {{$bv.Attr|ToHTMLAttr}}="{{$bv.Value}}"{{else}} class="btn {{if .Type}}btn-{{.Type}}{{else}}btn-primary{{end}} btn-flat{{if not .ButtonSubmit.DisableClose}} md-close{{end}}"{{end}}{{if not .ButtonSubmit.DisableClose}} data-dismiss="modal"{{end}}>{{if .ButtonSubmit.Text}}{{.ButtonSubmit.Text|$.T}}{{else}}{{"确定"|$.T}}{{end}}</button>
+        {{- end -}}
       </div>
     </div>
 </div>

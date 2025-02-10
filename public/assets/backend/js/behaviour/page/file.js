@@ -1,4 +1,4 @@
-var editor;
+var editor,creator;
 function resetCheckedbox() {
     $('#checkedAll:checked').prop('checked', false);
     $('#tbody-content input[type=checkbox][name="path[]"]:checked').prop('checked', false);
@@ -19,20 +19,37 @@ function refreshList() {
     },'html');
 }
 function initCodeMirrorEditor() {
-    editor = CodeMirror.fromTextArea($("#file-edit-content")[0], {
-      lineNumbers: true,
-      theme: 'ambiance',
-      extraKeys: {
-        "F11": function(cm) {
-          cm.setOption("fullScreen", !cm.getOption("fullScreen"));
+    var cfg = {
+        lineNumbers: true,
+        lineWrapping: true,
+        foldGutter: true,
+        gutters:["CodeMirror-linenumbers", "CodeMirror-foldgutter"],
+        autoCloseTags: true,
+        autoCloseBrackets: true,
+        showTrailingSpace: true,
+        indentWithTabs: true,
+        matchBrackets: true,
+        styleActiveLine: true,
+        styleSelectedText: true,
+        highlightSelectionMatches : true,
+        smartIndent: true,
+        theme: 'ambiance',
+        extraKeys: {
+          "F11": function(cm) {
+            cm.setOption("fullScreen", !cm.getOption("fullScreen"));
+          },
+          "Esc": function(cm) {
+            if (cm.getOption("fullScreen")) cm.setOption("fullScreen", false);
+          }
         },
-        "Esc": function(cm) {
-          if (cm.getOption("fullScreen")) cm.setOption("fullScreen", false);
-        }
-      }
-    });
-    editor.setOption('lineWrapping', true);
-    editor.setSize('auto', '100%');
+        hintOptions: {completeSingle: false}
+    }, newInstance=function(obj){
+        var editor = CodeMirror.fromTextArea(obj, cfg);
+        editor.setSize('auto', '100%');
+        editor.on('keypress', function(){if(typeof(editor.showHint)=='function')editor.showHint();});
+        return editor
+    };
+    editor = newInstance($("#file-edit-content")[0]);
     $('#file-edit-modal .modal-footer .btn-success').on('click',function(){
         var url=$(this).data('url');
         var enc=$('#use-encoding-open').val();
@@ -40,6 +57,28 @@ function initCodeMirrorEditor() {
         $.post(url,{content:editor.getValue(),encoding:enc},function(r){
             if(r.Code!=1)return App.message({title: App.i18n.SYS_INFO, text: r.Info},false);
             return App.message({title: App.i18n.SYS_INFO, text: App.i18n.SAVE_SUCCEED},false);
+        },'json');
+    });
+    if($("#file-create-content").length>0){
+        creator = newInstance($("#file-create-content")[0]);
+        $('#file-create-name').on('change',function(){
+            var file=$(this).val();
+            codeMirrorChangeMode(creator,file);
+            creator.refresh();
+        });
+    }
+    $('#file-create-modal .modal-footer .btn-primary:last').on('click',function(ev){
+        var url=$(this).data('url'),enc=$('#use-encoding-save').val(),fileName=$.trim($('#file-create-name').val());
+        if(!fileName){
+            App.message({text: App.t('请输入文件名'), type: 'error'});
+            $('#file-create-name').focus();
+            return;
+        }
+        if(!enc)enc='';
+        $.post(url,{content:creator.getValue(),encoding:enc,name:fileName},function(r){
+            if(r.Code!=1)return App.message({title: App.i18n.SYS_INFO, text: r.Info},false);
+            App.message({title: App.i18n.SYS_INFO, text: App.i18n.SAVE_SUCCEED},false);
+            $('#file-create-modal').niftyModal('hide');refreshList();
         },'json');
     });
     $('#file-edit-modal .modal-body').css('padding',0);
@@ -74,12 +113,32 @@ function fileEdit(obj,file) {
             afterOpen: function(modal) {
                 editor.setValue(r.Data);
                 codeMirrorChangeMode(editor,file);
+                editor.refresh();
             },
             afterClose: function(modal) {
                 $('#use-encoding-open').find('option:selected').prop('selected',false);
             }
         });
     },'json');
+}
+
+function fileCreate(obj) {
+    var url=$(obj).data('url');
+    $('#file-create-modal .modal-footer .btn-primary:last').data('url',url);
+    $('#file-create-modal .modal-header h3').html(App.i18n.CREATE_FILE);
+    $('#file-create-modal').niftyModal('show',{
+        afterOpen: function(modal) {
+            $('#file-create-name').val('');
+            creator.setValue('');
+            creator.refresh();
+            setTimeout(function(){
+                $('#file-create-name').focus();
+            },500)
+        },
+        afterClose: function(modal) {
+            $('#use-encoding-save').find('option:selected').prop('selected',false);
+        }
+    });
 }
 
 function fileRename(obj,file,isDir) {
@@ -167,7 +226,6 @@ function codeMirrorChangeMode(editor,val) {
   }
   if (mode) {
     editor.setOption("mode", spec);
-    CodeMirror.autoLoadMode(editor, mode);
   } else {
     console.log("Could not find a mode corresponding to " + val);
   }
@@ -184,7 +242,13 @@ $(function(){
         chunkSize:MAX_REQUEST_BYTES||2000000,
         maxFilesize:1024 // 文件最大尺寸(MB)
     };
-    if(typeof initDropzone == 'function')initDropzone($.extend({},defaultOptions,window.dropzoneOptions||{}));
+    var fixOptions=function(options){
+        options=$.extend({},defaultOptions,options||{});
+        var chunkSizeMB=defaultOptions.chunkSize/1024/1024;
+        if(chunkSizeMB>options.maxFilesize)options.maxFilesize=chunkSizeMB;
+        return options;
+    };
+    if(typeof initDropzone == 'function')initDropzone(fixOptions(window.dropzoneOptions));
     $('#uploadBtn').attr('dropzone-container','#multi-upload-dropzone').attr('dropzone-modal','#multi-upload-modal');
     if($('#uploadZipBtn').length>0) {
         $('#uploadZipBtn').attr('dropzone-container','#multi-upload-zip-dropzone').attr('dropzone-modal','#multi-upload-zip-modal');
@@ -198,12 +262,11 @@ $(function(){
         if(!dz) {
             var options = $(this).attr('dropzone-options');
             if(options && typeof options == 'string') options=JSON.parse(options);
-            App.editor.dropzone(dropzoneId,$.extend({},defaultOptions,options||{}));
+            App.editor.dropzone(dropzoneId,fixOptions(options));
             dz=$(dropzoneId).get(0).dropzone;
         }
         var modalId=$(this).attr('dropzone-modal');
         if(!modalId) return;
-        dz.on('addedfiles',function(){App.resizeModalHeight(modalId);});
         $(this).on('click',function(event){
             $(modalId).niftyModal('show',{
                 closeOnClickOverlay:false,
@@ -214,12 +277,9 @@ $(function(){
     })
     initCodeMirrorEditor();
     $(window).off().on('resize',function(){
-        $('#file-edit-modal,#file-play-modal').css({height:$(window).height(),width:'100%','max-width':'100%',left:0,top:0,transform:'none'});
         $('#file-edit-form,#file-play-video').css({height:$(window).height()-150,width:'100%','max-width':'100%',overflow:'auto'});
+        $('#file-create-form').css({height:$(window).height()-180,width:'100%','max-width':'100%',overflow:'auto'});
         $('#file-play-video > video').css({height:'100%'});
-        for(var i=0;i<modalIds.length;i++){
-            App.resizeModalHeight(modalIds[i]);
-        }
     });
     $(window).trigger('resize');
     $('#file-rename-modal .modal-footer .btn-primary:last').off().on('click',function(){

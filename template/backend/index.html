@@ -4,14 +4,14 @@
 <div class="row stat-card-items">
     {{- $cardSize := len $.Stored.cards -}}
     {{- range $k,$card := $.Stored.cards -}}
-    {{- if and $card (not (call $.Func.IsHiddenCard $card)) -}}
+    {{- if not ($.IsHidden $card) -}}
     <div class="col-md-{{if lt $cardSize 4}}4{{else}}3{{end}} stat-card-item">
         <div class="block-flat">
             <div class="content no-padding">
-                <div class="overflow-hidden">
-                    <i class="fa {{$card.IconName}} fa-4x pull-left color-{{$card.IconColor}}"></i>
+                <div class="overflow-hidden nowrap">
+                    <i class="fa {{$card.IconName}} fa-4x pull-left color-{{$card.IconColor}} sm-margin-right"></i>
                     <h3 class="no-margin">{{$card.Short}}</h3>
-                    <p class="color-primary">{{$card.Name}}</p>
+                    <p class="color-primary">{{$card.Name|$.T|UpperCaseFirst}}</p>
                 </div>
                 <h1 class="no-margin overflow-hidden">{{$card.Content}}</h1>
             </div>
@@ -21,7 +21,7 @@
     {{- end -}}
 </div>
 {{- range $k,$block := $.Stored.blocks -}}
-{{- if and $block (not (call $.Func.IsHiddenBlock $block)) -}}
+{{- if not ($.IsHidden $block) -}}
 {{- if $block.Tmpl}}{{$.Fetch $block.Tmpl $}}{{end -}}
 {{- end -}}
 {{- end -}}
@@ -29,7 +29,7 @@
     <div class="col-md-12">
         <div class="block-flat no-padding">
             <div class="header">
-                <h3>{{"欢迎回来"|}}</h3>
+                <h3>{{"欢迎回来"|$.T}}</h3>
             </div>
             <div class="content padding">
                 <div class="well no-margin no-padding sm-padding-top">
@@ -38,11 +38,9 @@
             {{- if $.Stored.license.Key -}}
             <div class="alert alert-success alert-white rounded license-info-container{{if $.Stored.license.Info.LicenseID}} license-items-1{{end}}">
                 <div class="icon"><span class="text-white">{{"授权信息"|$.T}}</span></div>
-                <div class="row no-margin">
+                <div class="row">
                 <dl class="col-md-3"><dt>{{"授权用户"|$.T}}</dt><dd>{{$.Stored.license.Info.Name}}</dd></dl>
-                {{- if $.Stored.license.Info.LicenseID -}}
                 <dl class="col-md-3"><dt>{{"证书编号"|$.T}}</dt><dd>{{$.Stored.license.Info.LicenseID}}</dd></dl>
-                {{- end -}}
                 {{- if $.Stored.license.Info.Domain -}}
                 <dl class="col-md-3"><dt>{{"授权域名"|$.T}}</dt><dd>{{$.Stored.license.Info.Domain}}</dd></dl>
                 {{- else -}}
@@ -63,7 +61,7 @@
                         {{- else -}}
                             (<span class="color-success">{{"还剩"|$.T}} {{$remainingString}}</span>)
                         {{- end -}}
-                        <a class="btn btn-xs btn-default" href="{{$.Stored.productURL}}?source={{$.SiteURI}}" target="_blank"><i class="fa fa-shopping-cart"></i>{{"续期"|$.T}}</a>
+                        <a class="btn btn-xs btn-default" href="{{$.Stored.productURL}}" target="_blank"><i class="fa fa-shopping-cart"></i>{{"续期"|$.T}}</a>
                     </dd></dl>
                     {{- end -}}
                 {{- end -}}
@@ -77,7 +75,7 @@
 {{/Block}}
 {{Block "footer"}}
 {{- range $k,$block := $.Stored.blocks -}}
-{{- if and $block (not (call $.Func.IsHiddenBlock $block)) -}}
+{{- if not ($.IsHidden $block) -}}
 {{- if $block.Footer}}{{$.Fetch $block.Footer $}}{{end -}}
 {{- end -}}
 {{- end -}}

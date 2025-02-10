@@ -26,8 +26,9 @@ import (
 	"github.com/webx-top/db/lib/factory/mysql"
 	"github.com/webx-top/echo"
 
-	"github.com/admpub/nging/v5/application/library/common"
-	"github.com/admpub/nging/v5/application/model/file"
+	"github.com/coscms/webcore/library/common"
+	"github.com/coscms/webcore/library/nsql"
+	"github.com/coscms/webcore/model/file"
 )
 
 func List(ctx echo.Context, ownerType string, ownerID uint64) error {
@@ -85,7 +86,11 @@ func List(ctx echo.Context, ownerType string, ownerID uint64) error {
 	if len(timerange) > 0 {
 		cond.Add(mysql.GenDateRange(`created`, timerange).V()...)
 	}
-	common.SelectPageCond(ctx, cond, `id`, `save_name%,name`)
+	saveName := ctx.Formx(`saveName`).String()
+	if len(saveName) > 0 {
+		ctx.Request().Form().Set(`q`, saveName)
+	}
+	nsql.SelectPageCond(ctx, cond, `id`, `save_name%,name`)
 	sorts := common.Sorts(ctx, fileM.NgingFile, `-id`)
 	_, err := common.NewLister(fileM.NgingFile, nil, func(r db.Result) db.Result {
 		return r.OrderBy(sorts...)

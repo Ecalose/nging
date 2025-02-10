@@ -21,8 +21,8 @@ package tool
 import (
 	"github.com/webx-top/echo"
 
-	"github.com/admpub/nging/v5/application/library/common"
-	"github.com/admpub/nging/v5/application/library/ip2region"
+	"github.com/coscms/webcore/library/common"
+	"github.com/coscms/webcore/library/ip2region"
 )
 
 func IP2Region(c echo.Context) error {
@@ -41,6 +41,13 @@ func IP2Region(c echo.Context) error {
 				ip = lanIP
 			}
 		}
+		c.Set(`clientIP`, echo.H{
+			`RemoteAddress`:   c.Request().RemoteAddress(),
+			`Forwarded`:       c.Header(`Forwarded`),
+			`XForwardedFor`:   c.Header(echo.HeaderXForwardedFor),
+			`XForwardedProto`: c.Header(echo.HeaderXForwardedProto),
+			`XRealIP`:         c.Header(echo.HeaderXRealIP),
+		})
 		c.Request().Form().Set(`ip`, ip)
 	}
 	if !c.IsPost() {

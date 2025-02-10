@@ -1,10 +1,9 @@
 package task
 
 import (
-	"github.com/admpub/nging/v5/application/library/config/cmder"
-	cronCmder "github.com/admpub/nging/v5/application/library/cron/cmder"
-	"github.com/admpub/nging/v5/application/library/module"
-	"github.com/admpub/nging/v5/application/registry/navigate"
+	"github.com/coscms/webcore/library/config/cmder"
+	cronCmder "github.com/coscms/webcore/library/cron/cmder"
+	"github.com/coscms/webcore/library/module"
 )
 
 const ID = `task`
@@ -14,7 +13,7 @@ var Module = module.Module{
 	Cmder: map[string]cmder.Cmder{
 		ID: cronCmder.New(),
 	},
-	Navigate: func(nc *navigate.Collection) {
-		nc.Backend.AddLeftItems(-1, LeftNavigate)
+	Navigate: func(nc module.Navigate) {
+		nc.Backend().AddLeftItems(-1, LeftNavigate)
 	},
 }

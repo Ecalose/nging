@@ -27,16 +27,18 @@ import (
 
 	"github.com/webx-top/com"
 	"github.com/webx-top/echo"
+	"github.com/webx-top/echo/code"
 
-	"github.com/admpub/nging/v5/application/handler"
-	"github.com/admpub/nging/v5/application/library/config"
-	"github.com/admpub/nging/v5/application/library/filemanager"
-	"github.com/admpub/nging/v5/application/library/notice"
-	"github.com/admpub/nging/v5/application/library/respond"
-	"github.com/admpub/nging/v5/application/library/s3manager/s3client"
-	"github.com/admpub/nging/v5/application/model"
+	"github.com/coscms/webcore/library/backend"
+	"github.com/coscms/webcore/library/common"
+	"github.com/coscms/webcore/library/config"
+	"github.com/coscms/webcore/library/filemanager"
+	"github.com/coscms/webcore/library/notice"
+	"github.com/coscms/webcore/library/respond"
+	"github.com/coscms/webcore/library/s3manager/s3client"
+	"github.com/coscms/webcore/model"
 
-	uploadChunk "github.com/admpub/nging/v5/application/registry/upload/chunk"
+	uploadChunk "github.com/coscms/webcore/registry/upload/chunk"
 	uploadClient "github.com/webx-top/client/upload"
 	uploadDropzone "github.com/webx-top/client/upload/driver/dropzone"
 )
@@ -63,7 +65,7 @@ func StorageFile(ctx echo.Context) error {
 	if len(parentPath) > 0 && parentPath != `/` {
 		parentPath += `/`
 	}
-	user := handler.User(ctx)
+	user := backend.User(ctx)
 	switch do {
 	case `corsRules`:
 		data := ctx.Data()
@@ -80,7 +82,7 @@ func StorageFile(ctx echo.Context) error {
 		ctx.Set(`rules`, rules)
 		ctx.Set(`data`, m.NgingCloudStorage)
 		ctx.Set(`title`, ctx.T(`配置CORS规则`))
-		return ctx.Render(`cloud/storage_cors`, handler.Err(ctx, err))
+		return ctx.Render(`cloud/storage_cors`, common.Err(ctx, err))
 	case `edit`:
 		data := ctx.Data()
 		if _, ok := config.FromFile().Sys.Editable(ppath); !ok {
@@ -96,6 +98,23 @@ func StorageFile(ctx echo.Context) error {
 					data.SetInfo(ctx.T(`保存成功`), 1)
 				}
 				data.SetData(dat, 1)
+			}
+		}
+		return ctx.JSON(data)
+	case `createFile`:
+		data := ctx.Data()
+		if ctx.IsPost() {
+			fileName := ctx.Formx(`name`).String()
+			if len(fileName) == 0 {
+				return ctx.JSON(data.SetError(ctx.NewError(code.InvalidParameter, `请输入文件名`).SetZone(`name`)))
+			}
+			content := ctx.Form(`content`)
+			encoding := ctx.Form(`encoding`)
+			err := mgr.CreateFile(ctx, path.Join(ppath, fileName), content, encoding)
+			if err != nil {
+				data.SetInfo(err.Error(), 0)
+			} else {
+				data.SetInfo(ctx.T(`保存成功`), 1)
 			}
 		}
 		return ctx.JSON(data)
@@ -147,7 +166,7 @@ func StorageFile(ctx echo.Context) error {
 			ppath = path.Clean(ppath)
 			err = mgr.Remove(ctx, ppath)
 			if err != nil {
-				handler.SendFail(ctx, err.Error())
+				common.SendFail(ctx, err.Error())
 				return ctx.Redirect(next)
 			}
 		}
@@ -175,7 +194,7 @@ func StorageFile(ctx echo.Context) error {
 		}
 		err = mgr.Upload(ctx, ppath, cu, opts...)
 		if err != nil {
-			user := handler.User(ctx)
+			user := backend.User(ctx)
 			if user != nil {
 				notice.OpenMessage(user.Username, `upload`)
 				notice.Send(user.Username, notice.NewMessageWithValue(`upload`, ctx.T(`文件上传出错`), err.Error()))
@@ -220,5 +239,5 @@ func StorageFile(ctx echo.Context) error {
 		return mime
 	})
 	ctx.Set(`data`, m.NgingCloudStorage)
-	return ctx.Render(`cloud/storage_file`, handler.Err(ctx, err))
+	return ctx.Render(`cloud/storage_file`, common.Err(ctx, err))
 }

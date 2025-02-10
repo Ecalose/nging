@@ -27,13 +27,16 @@ import (
 	"github.com/webx-top/echo/code"
 	"github.com/webx-top/echo/param"
 
-	"github.com/admpub/nging/v5/application/handler"
-	"github.com/admpub/nging/v5/application/library/backend"
-	"github.com/admpub/nging/v5/application/library/common"
-	"github.com/admpub/nging/v5/application/model"
+	"github.com/coscms/webcore/library/backend"
+	"github.com/coscms/webcore/library/common"
+	"github.com/coscms/webcore/library/nerrors"
+	"github.com/coscms/webcore/library/notice"
+	"github.com/coscms/webcore/library/nsql"
+	"github.com/coscms/webcore/model"
 )
 
 func User(ctx echo.Context) error {
+	user := backend.User(ctx)
 	username := ctx.Formx(`username`).String()
 	online := ctx.Form(`online`)
 	cond := db.Compounds{}
@@ -41,15 +44,40 @@ func User(ctx echo.Context) error {
 		cond.AddKV(`username`, db.Like(username+`%`))
 	}
 	if len(online) > 0 {
-		cond.AddKV(`online`, online)
+		if online == `Y` {
+			cond.Add(db.Or(
+				db.Cond{`id`: user.Id},
+				db.Cond{`online`: online},
+			))
+		} else {
+			cond.Add(db.Cond{`online`: `N`})
+		}
 	}
-	common.SelectPageCond(ctx, &cond, `id`, `username`)
+	nsql.SelectPageCond(ctx, &cond, `id`, `username`)
 	m := model.NewUser(ctx)
-	_, err := handler.PagingWithLister(ctx, handler.NewLister(m, nil, func(r db.Result) db.Result {
+	_, err := common.PagingWithLister(ctx, common.NewLister(m, nil, func(r db.Result) db.Result {
 		return r.Select(factory.DBIGet().OmitSelect(m, `password`, `salt`, `safe_pwd`)...).OrderBy(`-id`)
 	}, cond.And()))
-	ret := handler.Err(ctx, err)
+	ret := common.Err(ctx, err)
 	rows := m.Objects()
+	var offlineUserIDs []uint
+	for index, row := range rows {
+		if row.Online == `Y` {
+			if row.Id != user.Id && !notice.IsOnline(row.Username) {
+				row.Online = `N`
+				rows[index] = row
+				offlineUserIDs = append(offlineUserIDs, row.Id)
+			}
+		} else {
+			if row.Id == user.Id {
+				row.Online = `Y`
+				rows[index] = row
+			}
+		}
+	}
+	if len(offlineUserIDs) > 0 {
+		m.NgingUser.UpdateField(nil, `online`, `N`, `id`, db.In(offlineUserIDs))
+	}
 	ctx.Set(`listData`, rows)
 	return ctx.Render(`/manager/user`, ret)
 }
@@ -63,11 +91,11 @@ func UserAdd(ctx echo.Context) error {
 		m.Mobile = strings.TrimSpace(ctx.Form(`mobile`))
 		m.Password = strings.TrimSpace(ctx.Form(`password`))
 		confirmPwd := strings.TrimSpace(ctx.Form(`confirmPwd`))
-		m.Password, err = backend.DecryptPassword(ctx, m.Password)
+		m.Password, err = backend.DecryptPassword(ctx, m.Username, m.Password)
 		if err != nil {
 			return ctx.NewError(code.InvalidParameter, `密码解密失败: %v`, err).SetZone(`password`)
 		}
-		confirmPwd, err = backend.DecryptPassword(ctx, confirmPwd)
+		confirmPwd, err = backend.DecryptPassword(ctx, m.Username, confirmPwd)
 		if err != nil {
 			return ctx.NewError(code.InvalidParameter, `您输入的确认密码解密失败: %v`, err).SetZone(`confirmPwd`)
 		}
@@ -80,8 +108,8 @@ func UserAdd(ctx echo.Context) error {
 		m.RoleIds = strings.Join(ctx.FormValues(`roleIds`), `,`)
 		err = m.Add()
 		if err == nil {
-			handler.SendOk(ctx, ctx.T(`操作成功`))
-			return ctx.Redirect(handler.URLFor(`/manager/user`))
+			common.SendOk(ctx, ctx.T(`操作成功`))
+			return ctx.Redirect(backend.URLFor(`/manager/user`))
 		}
 	} else {
 		id := ctx.Formx(`copyId`).Uint()
@@ -104,7 +132,7 @@ END:
 	ctx.SetFunc(`isChecked`, func(roleId uint) bool {
 		return false
 	})
-	return ctx.Render(`/manager/user_edit`, handler.Err(ctx, err))
+	return ctx.Render(`/manager/user_edit`, common.Err(ctx, err))
 }
 
 func UserEdit(ctx echo.Context) error {
@@ -112,20 +140,20 @@ func UserEdit(ctx echo.Context) error {
 	m := model.NewUser(ctx)
 	err := m.Get(nil, `id`, id)
 	if err != nil {
-		handler.SendFail(ctx, err.Error())
-		return ctx.Redirect(handler.URLFor(`/manager/user`))
+		common.SendFail(ctx, err.Error())
+		return ctx.Redirect(backend.URLFor(`/manager/user`))
 	}
 	if ctx.IsPost() {
 		modifyPwd := ctx.Form(`modifyPwd`) == `1`
 		password := strings.TrimSpace(ctx.Form(`password`))
 		confirmPwd := strings.TrimSpace(ctx.Form(`confirmPwd`))
 		if modifyPwd {
-			password, err = backend.DecryptPassword(ctx, password)
+			password, err = backend.DecryptPassword(ctx, m.Username, password)
 			if err != nil {
 				err = ctx.NewError(code.InvalidParameter, `新密码解密失败: %v`, err).SetZone(`newPass`)
 				goto END
 			}
-			confirmPwd, err = backend.DecryptPassword(ctx, confirmPwd)
+			confirmPwd, err = backend.DecryptPassword(ctx, m.Username, confirmPwd)
 			if err != nil {
 				err = ctx.NewError(code.InvalidParameter, `您输入的确认密码解密失败: %v`, err).SetZone(`confirmPwd`)
 				goto END
@@ -157,8 +185,8 @@ func UserEdit(ctx echo.Context) error {
 			err = m.UpdateField(id, set)
 		}
 		if err == nil {
-			handler.SendOk(ctx, ctx.T(`修改成功`))
-			return ctx.Redirect(handler.URLFor(`/manager/user`))
+			common.SendOk(ctx, ctx.T(`修改成功`))
+			return ctx.Redirect(backend.URLFor(`/manager/user`))
 		}
 	}
 
@@ -170,7 +198,7 @@ END:
 		return r.Select(`id`, `name`, `description`)
 	}, 0, -1, db.And(db.Cond{`parent_id`: 0}))
 	ctx.Set(`roleList`, roleM.Objects())
-	return ctx.Render(`/manager/user_edit`, handler.Err(ctx, err))
+	return ctx.Render(`/manager/user_edit`, common.Err(ctx, err))
 }
 
 func setFormData(ctx echo.Context, m *model.User) {
@@ -195,25 +223,25 @@ func UserDelete(ctx echo.Context) error {
 	id := ctx.Formx(`id`).Uint64()
 	m := model.NewUser(ctx)
 	if id == 1 {
-		handler.SendFail(ctx, ctx.T(`创始人不可删除`))
-		return ctx.Redirect(handler.URLFor(`/manager/user`))
+		common.SendFail(ctx, ctx.T(`创始人不可删除`))
+		return ctx.Redirect(backend.URLFor(`/manager/user`))
 	}
 	err := m.Delete(nil, db.Cond{`id`: id})
 	if err == nil {
-		handler.SendOk(ctx, ctx.T(`操作成功`))
+		common.SendOk(ctx, ctx.T(`操作成功`))
 	} else {
-		handler.SendFail(ctx, err.Error())
+		common.SendFail(ctx, err.Error())
 	}
 
-	return ctx.Redirect(handler.URLFor(`/manager/user`))
+	return ctx.Redirect(backend.URLFor(`/manager/user`))
 }
 
 // UserKick 踢🦶用户下线
 func UserKick(ctx echo.Context) error {
 	id := ctx.Formx(`id`).Uint()
-	user := handler.User(ctx)
+	user := backend.User(ctx)
 	if user == nil {
-		return common.ErrUserNotLoggedIn
+		return nerrors.ErrUserNotLoggedIn
 	}
 	if id == user.Id {
 		return ctx.E(`不能踢自己`)
@@ -226,16 +254,16 @@ func UserKick(ctx echo.Context) error {
 		return err
 	}
 	if len(m.SessionId) == 0 {
-		handler.SendFail(ctx, ctx.T(`此用户没有 session id 记录`))
+		common.SendFail(ctx, ctx.T(`此用户没有 session id 记录`))
 	} else {
 		err = ctx.Session().RemoveID(m.SessionId)
 		if err == nil {
 			m.NgingUser.UpdateField(nil, `session_id`, ``, `id`, id)
-			handler.SendOk(ctx, ctx.T(`操作成功`))
+			common.SendOk(ctx, ctx.T(`操作成功`))
 		} else {
-			handler.SendFail(ctx, err.Error())
+			common.SendFail(ctx, err.Error())
 		}
 	}
 
-	return ctx.Redirect(handler.URLFor(`/manager/user`))
+	return ctx.Redirect(backend.URLFor(`/manager/user`))
 }

@@ -14,7 +14,7 @@ var App = function () {
 	};
 
 	/*Form Wizard*/
-	var wizard = function () {
+	function wizardInit() {
 		//Fuel UX
 		$('.wizard-ux').wizard();
 
@@ -34,7 +34,8 @@ var App = function () {
 		});
 	};//End of wizard
 
-	function toggleSideBar(_this) {
+	function toggleSideBar() {
+		if($("#sidebar-collapse").length<1) return;
 		var b = $("#sidebar-collapse")[0];
 		var w = $("#cl-wrapper");
 		if (w.hasClass("sb-collapsed")) {
@@ -55,13 +56,11 @@ var App = function () {
 				aside.addClass('collapsed');
 				store.set(key, 'collapsed');
 				aside.trigger('collapsed');
-				tableReponsive();
 			});
 			$(this).children('.collapsed-button').on('click', function () {
 				aside.removeClass('collapsed');
 				store.set(key, '');
 				aside.trigger('expanded');
-				tableReponsive();
 			});
 			if (store.get(key) == 'collapsed') {
 				$(this).find('.header > .collapse-button').trigger('click');
@@ -72,43 +71,16 @@ var App = function () {
 	function tableReponsiveInit() {
 		var aside = $('#main-container > .page-aside');
 		var asideWidth = aside.width();
-		//if($('#pcont').width()>bodyWidth){
 		if (asideWidth < 270) {
 			aside.find('.header > .collapse-button').trigger('click');
 			return;
 		}
-		tableReponsive();
 	}
 
-	function firstChildrenTable(jqObj) {
-		var table = jqObj.children();
-		if(table.length<1) return null;
-		switch (table[0].tagName.toUpperCase()) {
-			case 'TABLE': return table;
-			default: return firstChildrenTable(table)
-		}
+	function getJQueryObject(a){
+		return (typeof(a)=='object' && a instanceof jQuery) ? a : $(a);
 	}
-
-	function tableReponsive(elem) {
-		if (elem == null) elem = '#cl-wrapper > .cl-body .table-responsive';
-		var jqObj = (elem instanceof jQuery) ? elem : $(elem);
-		var pcontLeft = $('#pcont').offset().left, contWidth = $(window).width() - pcontLeft;
-		jqObj.each(function () {
-			var marginWidth = $(this).offset().left - pcontLeft;
-			var bodyWidth = contWidth - marginWidth * 2;
-			var oldWidth = $(this).data('width');
-			if (oldWidth && oldWidth == bodyWidth) return;
-			$(this).data('width', bodyWidth);
-			var table = firstChildrenTable($(this));
-			if (table == null) return;
-			if (table.outerWidth() > bodyWidth) {
-				$(this).addClass('overflow').css('max-width', bodyWidth);
-			} else {
-				$(this).removeClass('overflow').css('max-width', bodyWidth);
-			}
-		});
-	}
-
+	
 	/*SubMenu hover */
 	var tool = $("<div id='sub-menu-nav' style='position:fixed;z-index:9999;'></div>");
 	var htmlEncodeRegexp=/&|<|>| |\'|\"/g,htmlEncodeMapping = {
@@ -182,26 +154,77 @@ var App = function () {
 		});
 	}
 
+	function passwordInputShowPassword(container){
+		var e,s='a.show-password[data-target]:not([pwdshow]),a[data-toggle="password"]:not([pwdshow])';
+		if(!container){
+			e=$(s);
+		}else{
+			e=$(container).find(s);
+		}
+		e.on('click',function(){
+			var target=$(this).data('target')?$($(this).data('target')):$(this).parent('.input-group-addon,.input-group-btn').prev('input');
+			if(target.attr('type')=='text'){
+				target.attr('type','password');
+			  	$(this).html('<i class="fa fa-eye"></i> '+App.t('显示'));
+			}else{
+				target.attr('type','text');
+			  	$(this).html('<i class="fa fa-eye-slash"></i> '+App.t('隐藏'));
+			}
+		});
+		e.attr('pwdshow','1');
+	}
+
+	function editableSortNumber(container,url,callback){
+		if(String(url).charAt(0) != '/') url='/'+url;
+		$(container).find('td.editable').each(function(){
+			var inputType='number', pk=$(this).data('id'), me=this;
+			$(this).children('span').editable({
+			   url: BACKEND_URL+url,
+			   type: inputType,
+			   pk: pk, name: 'sort',
+			   title: App.t('修改排序'),
+			   ajaxOptions:{
+				   dataType: 'json',
+				   success: function(r){
+						if(r.Code!=1) return App.message({text:r.Info,class_name:'danger'});
+						if(callback) callback.apply(me,arguments);
+						return App.message({text:r.Info,class_name:'success'});
+				   },
+				   error: function(xhr){
+						return App.message({text:xhr.responseText,class_name:'danger'});
+				   }
+			   }
+			});
+		});
+	}
+
 	var cachedLang = null, previousPlotPoint = null; 
 	return {
 		clientID: {},
 		i18n: {
-			SYS_INFO: 'System Information', 
-			UPLOAD_ERR: 'Upload Error', 
-			PLEASE_SELECT_FOR_OPERATE: 'Please select the item you want to operate', 
-			PLEASE_SELECT_FOR_REMOVE: 'Please select the item you want to delete', 
-			CONFIRM_REMOVE: 'Are you sure you want to delete them?', 
-			SELECTED_ITEMS: 'You have selected %d items', 
-			SUCCESS: 'The operation was successful', 
-			FAILURE: 'Operation failed', 
-			UPLOADING:'File uploading, please wait...', 
-			UPLOAD_SUCCEED:'Upload successfully', 
-			BUTTON_UPLOAD:'Upload' 
+			SYS_INFO: 'System Information',  // App.t('SYS_INFO')
+			UPLOAD_ERR: 'Upload Error',  // App.t('UPLOAD_ERR')
+			PLEASE_SELECT_FOR_OPERATE: 'Please select the item you want to operate',  // App.t('PLEASE_SELECT_FOR_OPERATE')
+			PLEASE_SELECT_FOR_REMOVE: 'Please select the item you want to delete',  // App.t('PLEASE_SELECT_FOR_REMOVE')
+			CONFIRM_REMOVE: 'Are you sure you want to delete them?',  // App.t('CONFIRM_REMOVE')
+			SELECTED_ITEMS: 'You have selected %d items',  // App.t('SELECTED_ITEMS')
+			SUCCESS: 'The operation was successful',  // App.t('SUCCESS')
+			FAILURE: 'Operation failed',  // App.t('FAILURE')
+			UPLOADING:'File uploading, please wait...',  // App.t('UPLOADING')
+			UPLOAD_SUCCEED:'Upload successfully', // App.t('UPLOAD_SUCCEED')
+			BUTTON_UPLOAD:'Upload' // App.t('BUTTON_UPLOAD')
 		},
 		lang: 'en',
 		sprintf: sprintfWrapper.init,
 		t: function (key) {
 			if (typeof (App.i18n[key]) == 'undefined') {
+				if (key.startsWith('#')) {
+					var k = key.substring(1), p = k.indexOf('#');
+					if (p>1) {
+						key = k.substring(p+1);
+						arguments[0] = key;
+					}
+				}
 				if (arguments.length < 2) return key;
 				return App.sprintf.apply(this, arguments);
 			}
@@ -307,6 +330,7 @@ var App = function () {
 				onend: function (evt, xhr, opt) {
 					$(opt.container).find('[data-popover="popover"]').popover();
 					$(opt.container).find('.ttip, [data-toggle="tooltip"]').tooltip();
+					passwordInputShowPassword(opt.container);
 				}
 			});
 			App.attachAjaxURL(elem);
@@ -328,18 +352,22 @@ var App = function () {
 			$("#sidebar-collapse").on('click',function () {
 				toggleSideBar();
 			});
-
-			if ($("#cl-wrapper").hasClass("fixed-menu")) {
-				var scroll = $("#cl-wrapper .menu-space");
+			function onWinResize(wrapper){
+			}
+			var wrapper = $("#cl-wrapper");
+			if (wrapper.hasClass("fixed-menu")) {
+				var scroll = wrapper.find(".menu-space");
 				scroll.addClass("nano nscroller");
 
 				function updateHeight() {
-					var button = $("#cl-wrapper .collapse-button");
+					var wrapper = $("#cl-wrapper");
+					var button = wrapper.find(".collapse-button");
 					var collapseH = button.outerHeight();
 					var navH = $("#head-nav").height();
 					var height = $(window).height() - ((button.is(":visible")) ? collapseH : 0) - navH;
 					scroll.css("height", height);
-					$("#cl-wrapper .nscroller").nanoScroller({ preventPageScrolling: true });
+					wrapper.find(".nscroller").nanoScroller({ preventPageScrolling: true });
+					onWinResize(wrapper);
 				}
 
 				$(window).on('resize',function () {
@@ -347,17 +375,21 @@ var App = function () {
 				});
 
 				updateHeight();
-				$("#cl-wrapper .nscroller").nanoScroller({ preventPageScrolling: true });
+				wrapper.find(".nscroller").nanoScroller({ preventPageScrolling: true });
 			}else{
 				$(window).on('resize',function () {
+					var wrapper = $("#cl-wrapper");
 					if($(window).width()>767){
 						var navH = $("#head-nav").height();
-						$('#cl-wrapper').css("padding-top", navH);
+						wrapper.css("padding-top", navH);
 					}
+					onWinResize(wrapper);
 				});
+				onWinResize(wrapper);
 			}
 
 			returnToTopButton();
+			passwordInputShowPassword();
 
 			/*Datepicker UI*/
 			if ($(".ui-datepicker").length > 0) $(".ui-datepicker").datepicker();
@@ -422,23 +454,14 @@ var App = function () {
 		},
 		autoFixedThead: function (prefix) {
 			if (prefix == null) prefix = '';
-			App.topFloatThead(prefix + 'thead.auto-fixed', $('#head-nav').height());
+			var top = function(){return $(window).width()>=753 ? $('#head-nav').height() : 0;}
+			App.topFloatThead(prefix + 'thead.auto-fixed', top);
 		},
-		pageAside: function (options) {
-			pageAside(options);
-		},
-		tableReponsiveInit: function (options) {
-			tableReponsiveInit(options);
-		},
-		tableReponsive: function (options) {
-			tableReponsive(options);
-		},
-		toggleSideBar: function () {
-			toggleSideBar();
-		},
-		wizard: function () {
-			wizard();
-		},
+		pageAside:pageAside,
+		tableReponsiveInit: tableReponsiveInit,
+		getJQueryObject: getJQueryObject,
+		toggleSideBar: toggleSideBar,
+		wizard: wizardInit,
 		markNavByURL: function (url) {
 			if (!url) url = window.location.pathname;
 			if (url == '/index') return;
@@ -808,7 +831,7 @@ var App = function () {
 			}
 			return url;
 		},
-		websocket: function (showmsg, url, onopen) {
+		websocket: function (showmsg, url, onopen, onclose) {
 			url = App.wsURL(url);
 			var ws = new WebSocket(url);
 			ws.onopen = function (evt) {
@@ -817,6 +840,7 @@ var App = function () {
 			};
 			ws.onclose = function (evt) {
 				console.log('Websocket Server is disconnected');
+				if (onclose != null && typeof onclose === "function") onclose.apply(this, arguments);
 			};
 			ws.onmessage = function (evt) {
 				showmsg(evt.data);
@@ -884,8 +908,8 @@ var App = function () {
 		},
 		notifyListen: function () {
 			var messageCount = {notify: 0, element: 0, modal: 0},  
-			messageMax = {notify: 20, element: 50, modal: 50};
-			App.websocket(function (message) {
+			messageMax = {notify: 20, element: 50, modal: 50}, retries = 0,
+			websocketHandle = function (message) {
 				//console.dir(message);
 				var m = $.parseJSON(message);
 				if (!m) {
@@ -1008,7 +1032,21 @@ var App = function () {
 						break;
 				}
 				return true;
-			}, BACKEND_URL + '/user/notice');
+			},
+			connect=function(onopen){
+				var ws = App.websocket(websocketHandle, BACKEND_URL + '/user/notice', onopen, function(){
+					window.setTimeout(function(){
+						retries++;
+						try {ws.close();} catch (_) {}
+						if (typeof(App.clientID['notify']) != 'undefined') {
+							delete App.clientID['notify'];
+						}
+						connect(function(){retries=0;});
+					},500*(retries+1));
+				});
+				return ws;
+			};
+			connect();
 		},
 		text2html: function (text, noescape) {
 			text = String(text);
@@ -1243,8 +1281,7 @@ var App = function () {
 			$(elems).not('[disabled-fixed]').each(function () {
 				$(this).attr('disabled-fixed', 'fixed');
 				var elem = this;
-				var _offset = $(elem).height() + top;
-				var offsetY = $(elem).offset().top + _offset;
+				var offsetY = $(elem).offset().top + top;
 				var w = $(elem).outerWidth(), h = $(elem).outerHeight();
 				if (!autoWith) autoWith = $(elem).data('auto-width');
 				if (autoWith) $(elem).css('width', w);
@@ -1302,60 +1339,77 @@ var App = function () {
 		},
 		topFloatRawThead: function (elems, top) {
 			if ($(elems).length < 1) return;
-			if (top == null) top = 0;
+			var topF = null;
+			if (typeof top == 'function'){
+				topF = top;
+			}else{
+				if (top == null) top = 0;
+				topF = function(){return top}
+			}
 			$(elems).not('[disabled-fixed]').each(function () {
 				$(this).attr('disabled-fixed', 'fixed');
-				var elem = this, table = $(elem).parent('table'), reponsive = table.parents('.table-responsive');
+				var elem = this, table = $(elem).parent('table'), reponsive = table.closest('.table-responsive');
 				var scrollable = reponsive.length > 0;
-				var offsetY = $(elem).offset().top, maxOffsetY = table.height() + offsetY - $(elem).outerHeight() * 2;
-				$(elem).css({ 'background-color': 'white' });
+				var offsetY = $(elem).offset().top, marginTop = Number(String(table.css('margin-top')).replace(/px$/,''));
+				$(elem).css({'background-color':'white'});
+				table.data('originalMarginTop',marginTop);
+				//if(!table.hasClass('layout-fixed') && table.children('colgroup').length>0) table.css({'table-layout':'fixed'});
 				var setSize = function (init) {
 					if (init == null) init = false;
 					if (scrollable) {
-						tableReponsive(reponsive);
 						if (!reponsive.hasClass('overflow')) {
 							$(elem).css({ 'width': 'auto', 'overflow-x': 'unset' });
 						}
 					}
-					var width = $(elem).outerWidth(), ratio = 1;
+					var tableWidth = table.width(), winScrollLeft = $(window).scrollLeft();
+					var width = $(elem).width(), ratio = 1;
 					if (!init) {
-						if (Math.abs(table.data('width') - width) > 1) {//避免抖动
-							ratio = width / table.data('width');
+						if (Math.abs(tableWidth - width) > 1) {//避免抖动
+							ratio = width / tableWidth;
 						}
-						if (table.data('offset-left') != $(table).offset().left) {
-						} else if (table.data('scroll-left') != $(window).scrollLeft()) {
-							$(elem).css({ 'left': table.offset().left - $(window).scrollLeft() });
+						if (table.data('offset-left') != table.offset().left) {
+							$(elem).css({'left':table.offset().left});
+						} else if (table.data('scroll-left') != winScrollLeft) {
+							var left = table.offset().left - winScrollLeft;
+							$(elem).css({ 'left': left });
 							if (ratio == 1) return;
 						}
 					}
-					table.data('width', width);//记录宽度
-					table.data('offset-left', $(table).offset().left);//记录左侧偏移
-					table.data('scroll-left', $(window).scrollLeft());//记录左侧滚动条
-					var cols = table.children('colgroup').length>0?table.children('colgroup').children('col'):table.children('col'), tds = $(elem).find('td,th');
+					var oldRatio=$(elem).data('ratio')||0;
+					$(elem).data('ratio',ratio);
+					table.data('offset-left', table.offset().left);//记录左侧偏移
+					table.data('scroll-left', winScrollLeft);//记录左侧滚动条
+					var cols = table.children('colgroup').length>0?table.children('colgroup').children('col'):table.children('col'), 
+					tds = $(elem).find('td,th');
 					if (cols.length < 1) {
 						var html = '';
+						$(elem).css({'width':table.width()});
 						tds.each(function () {
-							var w = $(this).outerWidth() * ratio;
-							html += '<col style="min-width:' + w + 'px;max-width:auto" />';
-							$(this).css({ 'min-width': w, 'max-width': 'auto' });
+							var width = $(this).outerWidth(), w = width * ratio;
+							html += '<col style="min-width:' + w + 'px;width:' + w + 'px;max-width:auto" />';
+							$(this).css({ 'min-width': w, 'width': w, 'max-width': 'auto' });
 						});
 						table.prepend(html);
 						return;
 					}
+					if (oldRatio == ratio) return;
+					$(elem).css({'width':tableWidth});
+					var tbodyTds = table.children('tbody').length>0?table.children('tbody').children('tr:first').find('td'):table.children('tr:first').find('td');
 					tds.each(function (index) {
-						var col = cols.eq(index);
-						var w = $(this).outerWidth() * ratio;
-						col.css({ 'width': w });
+						var col = cols.eq(index), td = tbodyTds.eq(index);
+						var w = !td || col.outerWidth()>td.outerWidth() ? col.outerWidth() : td.outerWidth();
 						$(this).css({ 'width': w });
 					});
 				}
 				setSize(true);
+				window.setTimeout(function(){setSize()},500);
 				$(window).on('scroll resize', function () {
 					setSize();
-					var scrollH = $(this).scrollTop();
+					var scrollH = $(this).scrollTop(), maxOffsetY = table.height() + offsetY - $(elem).outerHeight() * 2;
 					if (scrollH <= offsetY || scrollH >= maxOffsetY) {
 						if ($(elem).hasClass('always-top')) {
 							$(elem).removeClass('always-top');
+							table.css({'margin-top':table.data('originalMarginTop')});
 						}
 						if (scrollable) {
 							$(elem).off('scroll').data('scroll-reponsive', false);
@@ -1364,20 +1418,15 @@ var App = function () {
 						return;
 					}
 					if (table.height() > $(window).height()) {
-						if (!$(elem).hasClass('always-top')) $(elem).addClass('always-top');
-						var cssOpts = { 'top': top };
+						if (!$(elem).hasClass('always-top')) {
+							$(elem).addClass('always-top');
+							table.css({'margin-top':table.data('originalMarginTop')+$(elem).height()});
+						}
+						var cssOpts = { 'top': topF() };
 						if (scrollable) {
-							cssOpts['width'] = reponsive.outerWidth();
-							if (reponsive.hasClass('overflow')) cssOpts['overflow-x'] = 'auto';
-
-							if (!$(elem).data('scroll-reponsive')) {
-								$(elem).on('scroll', function () {
-									reponsive.scrollLeft($(this).scrollLeft());
-								}).data('scroll-reponsive', true);
-							}
 							if (!reponsive.data('scroll-thead')) {
 								reponsive.on('scroll', function () {
-									$(elem).scrollLeft($(this).scrollLeft());
+									$(elem).css({ 'left': reponsive.offset().left + $(this).scrollLeft()*-1 });
 								}).data('scroll-thead', true);
 							}
 						}
@@ -1390,32 +1439,43 @@ var App = function () {
 		topFloatThead: function (elems, top, clone) {
 			if (!clone) return App.topFloatRawThead(elems, top);
 			if ($(elems).length < 1) return;
-			if (top == null) top = 0;
+			var topF = null;
+			if (typeof top == 'function'){
+				topF = top;
+			}else{
+				if (top == null) top = 0;
+				topF = function(){return top}
+			}
 			$(elems).not('[disabled-fixed]').each(function () {
 				$(this).attr('disabled-fixed', 'fixed');
-				var elem = this, table = $(elem).parent('table');
-				var offsetY = $(elem).offset().top, maxOffsetY = table.height() + offsetY - $(elem).outerHeight() * 2, cid = $(elem).data('copy');
+				var elem = this, table = $(elem).parent('table'), reponsive = table.closest('.table-responsive');
+				var scrollable = reponsive.length > 0;
+				var offsetY = $(elem).offset().top, cid = $(elem).data('copy');
 				if (cid) {
 					$('#tableCopy' + cid).remove();
 				} else {
 					cid = Math.random();
 					$(elem).data('copy', cid);
 				}
-				var eCopy = $('<table class="' + table.attr('class') + ' always-top" style="background-color:white" id="tableCopy' + cid + '"></table>');
+				var eBox = $('<div class="always-top" style="overflow:hidden;display:block;width:'+(scrollable?reponsive.width():table.width())+'px;top:'+topF()+'px;box-shadow:0 1px 5px rgba(0,0,0,0.3)"></div>');
+				var eCopy = $('<table class="' + table.attr('class') + '" style="background-color:white;table-layout:fixed;position:relative" id="tableCopy' + cid + '"></table>');
 				var hCopy = $(elem).clone();
 				eCopy.append(hCopy);
+				eBox.html(eCopy);
 				var setSize = function (init) {
 					if (init == null) init = false;
 					if (!init) {
-						if (eCopy.data('offset-left') != $(elem).offset().left) {
-						} else if (eCopy.data('scroll-left') != $(window).scrollLeft()) {
+						var w = scrollable?reponsive.width():table.width();
+						if (eBox.width() != w) {
+							eBox.css({'width':w});
+						}else if (eCopy.data('scroll-left') != $(window).scrollLeft()) {
 							eCopy.css({ 'left': $(elem).offset().left - $(window).scrollLeft() });
 							return;
-						} else {
+						}else{
 							return;
 						}
 					}
-					eCopy.data('offset-left', $(elem).offset().left);//记录左侧偏移
+					eCopy.data('offset-left', table.offset().left);//记录左侧偏移
 					eCopy.data('scroll-left', $(window).scrollLeft());//记录左侧滚动条
 					var cols = hCopy.find('td,th'), rawCols = $(elem).find('td,th');
 					rawCols.each(function (index) {
@@ -1431,24 +1491,29 @@ var App = function () {
 							});
 						});
 					});
-					var offsetX = $(elem).offset().left - $(window).scrollLeft();
-					var w = $(elem).outerWidth(), h = $(elem).outerHeight()
-					eCopy.css({ 'top': top, 'left': offsetX, 'width': w, 'height': h });
+					var w = scrollable?reponsive.width():table.width(), h = $(elem).outerHeight()
+					eCopy.css({ 'width': w, 'height': h });
 				}
 				setSize(true);
-				eCopy.hide();
-				table.after(eCopy);
+				eBox.hide();
+				table.after(eBox);
+				window.setTimeout(function(){setSize()},500);
 				$(window).on('scroll', function () {
 					setSize();
-					var scrollH = $(this).scrollTop();
-					if (scrollH <= offsetY || scrollH >= maxOffsetY) return eCopy.hide();
-					eCopy.show();
+					var scrollH = $(this).scrollTop(), maxOffsetY = table.height() + offsetY - $(elem).outerHeight() * 2;
+					if (scrollH <= offsetY || scrollH >= maxOffsetY) return eBox.hide();
+					eBox.show();
 				});
+				if (reponsive.length>0 && !reponsive.data('scroll-thead')) {
+					reponsive.on('scroll', function () {
+						eCopy.css({ 'left': $(this).scrollLeft()*-1 });
+					}).data('scroll-thead', true);
+				}
 			});
 			//$(window).trigger('scroll');
 		},
 		getImgNaturalDimensions: function (oImg, callback) {
-			if (!oImg.naturalWidth) { // 现代浏览器
+			if (oImg && oImg.naturalWidth) { // 现代浏览器
 				callback({ w: oImg.naturalWidth, h: oImg.naturalHeight });
 				return;
 			}
@@ -1457,7 +1522,7 @@ var App = function () {
 			nImg.onload = function () {
 				callback({ w: nImg.width, h: nImg.height });
 			}
-			nImg.src = oImg.src;
+			if (oImg) nImg.src = oImg.src;
 		},
 		reportBug: function (url) {
 			$.post(url, { "panic": $('#panic-content').html(), "url": window.location.href }, function (r) { }, 'json');
@@ -1500,7 +1565,7 @@ var App = function () {
 			return raw;
 		},
 		genTable: function (rows, formatters) {
-			var h = '<table class="table table-bordered no-margin">';
+			var h = '<table class="table table-bordered table-condensed no-margin">';
 			var th = '<thead>', bd = '<tbody>';
 			for (var i = 0; i < rows.length; i++) {
 				var v = rows[i];
@@ -1542,7 +1607,7 @@ var App = function () {
 				$(window).off().on('resize', function () {
 					$modal.css({ height: $(window).height(), width: '100%', 'max-width': '100%', left: 0, top: 0, transform: 'none' });
 					$modal.find('.md-content').css('height', $(window).height());
-					$('#log-show-content').css('height', $(window).height() - 200);
+					$('#log-show-content').css('height', $(window).height() - 140);
 				});
 				$('#log-show-last-lines').on('change', function (r) {
 					var target = $(this).data('target');
@@ -1592,28 +1657,39 @@ var App = function () {
 									subTitle.empty();
 								}
 								if (typeof (r.Data.list) != 'undefined') {
-									var h = '<div class="table-responsive" id="' + contentID + '">' + App.genTable(r.Data.list, {
+									var wp = function (raw, index) {
+										return '<div class="wrap">'+App.htmlEncode(raw)+'</div>';
+									}, wp2 = function (raw, index) {
+										return '<div class="wrap" style="min-width:100px">'+App.htmlEncode(raw)+'</div>';
+									};
+									var h = '<div id="' + contentID + '">' + App.genTable(r.Data.list, {
 										'StatusCode': function (raw, index) {
 											return '<span class="label label-' + App.httpStatusColor(raw) + '">' + raw + '</span>';
 										},
+										'Brower': wp,
+										'UserAgent': wp2,
+										'URI': wp2,
+										'Referer': wp2,
 										'': function (raw, index) {
 											return App.htmlEncode(raw);
 										}
 									}) + '</div>';
 									$(contentE).parent('.modal-body').css('padding', 0);
 									$(contentE).replaceWith(h);
+									var sc = $(contentE).parent('.modal-body')[0];
+									sc.scrollTop = sc.scrollHeight;
 								} else {
 									if ($(contentE)[0].tagName.toUpperCase() != 'TEXTAREA') {
 										$(contentE).replaceWith("<textarea name='content' class='form-control' id='" + contentID + "'></textarea>");
 									}
 									$(contentE).text(r.Data.content);
+									var tx = $(contentE)[0];
+									tx.scrollTop = tx.scrollHeight;
 								}
 								if (typeof (r.Data.charset) != 'undefined' && $('#log-show-charset').length>0 && $('#log-show-charset').val() != r.Data.charset) {
 									$('#log-show-charset').find('option[value="'+r.Data.charset+'"]').prop('selected',true);
 								}
 								$(window).trigger('resize');
-								var textarea = $(contentE)[0];
-								textarea.scrollTop = textarea.scrollHeight;
 							} else {
 								$(contentE).text(r.Info);
 							}
@@ -1709,14 +1785,7 @@ var App = function () {
 				}
 			});
 		},
-		resizeModalHeight: function (el) {
-			var h = $(window).height() - 200;
-			if (h < 200) h = 200;
-			$(el).css({ "max-height": h + 'px' });
-			//var bh = h - 150;
-			//$(el).find('.modal-body').css({ "max-height": bh + 'px' });
-		},
-		switchStatus: function (a, type, editURL, callback) {
+		switchStatus: function (a, type, editURL, callback, dataBuilder) {
 			if (type == null) type = $(a).data('type');
 			var v = $(a).val();
 			var checkedValue = $(a).data('v-checked')||v||'N',
@@ -1738,6 +1807,7 @@ var App = function () {
 			if (editURL == null) editURL = $(a).data('url');
 			var that = $(a), status = a.checked ? checkedValue : uncheckedValue, data = { id: that.data('id') };
 			data[type] = status;
+			if (dataBuilder && typeof dataBuilder == 'function') data = dataBuilder(data,type,status);
 			if (String(editURL).charAt(0) != '/') editURL = BACKEND_URL + '/' + editURL;
 			$.get(editURL, data, function (r) {
 				if (r.Code == 1) {
@@ -1748,7 +1818,7 @@ var App = function () {
 				if (callback) callback.call(a, r);
 			}, 'json');
 		},
-		bindSwitch: function (elem, eventName, editURL, type, callback) {
+		bindSwitch: function (elem, eventName, editURL, type, callback, dataBuilder) {
 			if (eventName == null) eventName = 'click';
 			var re = new RegExp('switch-([\\w\\d]+)');
 			$(elem).on(eventName, function () {
@@ -1756,7 +1826,7 @@ var App = function () {
 					var matches = String($(this).attr('class')).match(re);
 					type = matches[1];
 				}
-				App.switchStatus(this, type, editURL, callback);
+				App.switchStatus(this, type, editURL, callback, dataBuilder);
 			});
 		},
 		removeSelected: function (elem, postField, removeURL, callback) {
@@ -1875,7 +1945,7 @@ var App = function () {
 		uploadPreviewer: function (elem, options, successCallback, errorCallback) {
 			if($(elem).parent('.file-preview-shadow').length<1){
 				var defaults = {
-					"buttonText":'<i class="fa fa-cloud-upload"></i> '+App.i18n.BUTTON_UPLOAD,
+					"buttonText":'<i class="fa fa-cloud-upload"></i> '+App.t('BUTTON_UPLOAD'),
 					"previewTableContainer":'#previewTableContainer',
 					"url":'',
 					"previewTableShow":false,
@@ -2138,6 +2208,8 @@ var App = function () {
   			}
   			return FRONTEND_URL;
 		},
+		passwordInputShowPassword: passwordInputShowPassword,
+		pwdShowCtrl: passwordInputShowPassword,
 		makeCheckerForUpgrade: function(max,version,successCallback,errorCallback){
 			var checks = 0, checking = false;
 			if(max==null||!max) max = 5;
@@ -2173,6 +2245,7 @@ var App = function () {
 			if(condition) return $(elem).show();
 			return $(elem).hide();
 		},
+		editableSortNumber: editableSortNumber,
 		showUpgradeInfo: function(version){
 			var upgradeModal=$('#self-upgrade-modal');
 			if(upgradeModal.length<1)return;
@@ -2246,7 +2319,3 @@ var App = function () {
 
 }();
 
-$(function () {
-	//$("body").animate({opacity:1,'margin-left':0},500);
-	$("body").css({ opacity: 1, 'margin-left': 0 });
-});
