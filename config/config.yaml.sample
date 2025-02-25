@@ -16,7 +16,11 @@ sys {
     htm       : "html"
     js        : "javascript"
     go        : "golang"
+    asp       : "asp"
     php       : "php"
+    jsp       : "jsp"
+    cs        : "csharp"
+    java      : "java"
     css       : "css"
     txt       : "txt"
     xml       : "xml"
@@ -30,6 +34,9 @@ sys {
     yaml      : "yaml"
     yml       : "yaml"
     log       : "log"
+    json      : "json"
+    toml      : "toml"
+    conf      : "conf"
   }
   editableFileMaxSize   : "1M" #允许在线编辑的最大文件尺寸
   errorPages            : { #指定错误页面模板
@@ -51,7 +58,8 @@ sys {
     "password" : ""
     "db"       : 1
   }
-  disableAutoUpgradeDB : false
+  disableAutoUpgradeDB : false # 升级程序的时候是否禁止自动升级数据库表结构
+  disableHTTPLog       : false # 是否禁止开启web框架的HTTP请求日志(更改后需要重启才生效)
 }
 cookie {
   path     : "/"
@@ -79,7 +87,7 @@ extend {
     options       : {}
   }
   sessionGuard : {
-    encryptedPasswordExpires : 300 #客户端加密密码的过期时长(单位:秒)
+    expires : 300 #客户端加密密码的过期时长(单位:秒)
   }
   oauth2backend : {
     on : false #总开关
@@ -95,4 +103,7 @@ extend {
       } 
 		}
   ]}
+  dbmanager : {
+    downloadSOAR : false
+  }
 }

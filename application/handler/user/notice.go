@@ -21,11 +21,12 @@ import (
 	"encoding/json"
 
 	"github.com/admpub/log"
-	"github.com/admpub/nging/v5/application/dbschema"
+	"github.com/coscms/webcore/dbschema"
 
-	"github.com/admpub/nging/v5/application/handler"
-	"github.com/admpub/nging/v5/application/library/notice"
 	"github.com/admpub/websocket"
+	"github.com/coscms/webcore/library/backend"
+	"github.com/coscms/webcore/library/notice"
+	"github.com/webx-top/db"
 	"github.com/webx-top/echo"
 	"github.com/webx-top/echo/code"
 	"github.com/webx-top/echo/defaults"
@@ -35,50 +36,41 @@ func init() {
 	notice.OnOpen(func(user string) {
 		ctx := defaults.NewMockContext()
 		userM := dbschema.NewNgingUser(ctx)
-		err := userM.UpdateField(nil, `online`, `Y`, `username`, user)
+		err := userM.UpdateField(nil, `online`, `Y`, db.And(
+			db.Cond{`username`: user},
+			db.Cond{`online`: `N`},
+		))
 		if err != nil {
-			log.Error(err)
+			log.Errorf(`failed to userM.UpdateField(online=Y,username=%q): %v`, user, err)
 		}
 	})
 	notice.OnClose(func(user string) {
 		ctx := defaults.NewMockContext()
 		userM := dbschema.NewNgingUser(ctx)
-		err := userM.UpdateField(nil, `online`, `N`, `username`, user)
+		err := userM.UpdateField(nil, `online`, `N`, db.And(
+			db.Cond{`username`: user},
+			db.Cond{`online`: `Y`},
+		))
 		if err != nil {
-			log.Error(err)
+			log.Errorf(`failed to userM.UpdateField(online=N,username=%q): %v`, user, err)
 		}
 	})
 }
 
 func Notice(c *websocket.Conn, ctx echo.Context) error {
-	user := handler.User(ctx)
+	user := backend.User(ctx)
 	if user == nil {
 		return ctx.NewError(code.Unauthenticated, `登录信息获取失败，请重新登录`)
 	}
-	oUser, clientID := notice.OpenClient(user.Username)
-	defer notice.CloseClient(user.Username, clientID)
+	close, msgChan, err := notice.Default().MakeMessageGetter(user.Username)
+	if err != nil || msgChan == nil {
+		return err
+	}
+	if close != nil {
+		defer close()
+	}
 	//push(writer)
-	go func(user *dbschema.NgingUser, clientID string) {
-		msg := notice.NewMessage()
-		message, err := json.Marshal(msg.SetMode(`-`).SetType(`clientID`).SetClientID(clientID))
-		msg.Release()
-		if err != nil {
-			handler.WebSocketLogger.Error(`Push error: `, err.Error())
-			return
-		}
-		handler.WebSocketLogger.Debug(`Push message: `, string(message))
-		if err = c.WriteMessage(websocket.TextMessage, message); err != nil {
-			if websocket.IsCloseError(err, websocket.CloseGoingAway) {
-				handler.WebSocketLogger.Debug(`Push error: `, err.Error())
-			} else {
-				handler.WebSocketLogger.Error(`Push error: `, err.Error())
-			}
-			return
-		}
-		msgChan := oUser.Recv(clientID)
-		if msgChan == nil {
-			return
-		}
+	go func() {
 		for {
 			//message := []byte(echo.Dump(notice.NewMessageWithValue(`type`, `title`, `content:`+time.Now().Format(time.RFC1123)), false))
 			//time.Sleep(time.Second)
@@ -89,23 +81,23 @@ func Notice(c *websocket.Conn, ctx echo.Context) error {
 			msgBytes, err := json.Marshal(message)
 			message.Release()
 			if err != nil {
-				handler.WebSocketLogger.Error(`Push error (json.Marshal): `, err.Error())
+				backend.WebSocketLogger.Error(`Push error (json.Marshal): `, err.Error())
 				return
 			}
-			handler.WebSocketLogger.Debug(`Push message: `, string(msgBytes))
+			backend.WebSocketLogger.Debug(`Push message: `, string(msgBytes))
 			if err = c.WriteMessage(websocket.TextMessage, msgBytes); err != nil {
 				if websocket.IsCloseError(err, websocket.CloseGoingAway) {
-					handler.WebSocketLogger.Debug(`Push error: `, err.Error())
+					backend.WebSocketLogger.Debug(`Push error: `, err.Error())
 				} else {
-					handler.WebSocketLogger.Error(`Push error: `, err.Error())
+					backend.WebSocketLogger.Error(`Push error: `, err.Error())
 				}
 				return
 			}
 		}
-	}(user, clientID)
+	}()
 
 	//echo
-	var execute = func(conn *websocket.Conn) error {
+	execute := func(conn *websocket.Conn) error {
 		for {
 			mt, message, err := conn.ReadMessage()
 			if err != nil {
@@ -117,12 +109,12 @@ func Notice(c *websocket.Conn, ctx echo.Context) error {
 			}
 		}
 	}
-	err := execute(c)
+	err = execute(c)
 	if err != nil {
 		if websocket.IsCloseError(err, websocket.CloseGoingAway) {
-			handler.WebSocketLogger.Debug(err.Error())
+			backend.WebSocketLogger.Debug(err.Error())
 		} else {
-			handler.WebSocketLogger.Error(err.Error())
+			backend.WebSocketLogger.Error(err.Error())
 		}
 	}
 	return nil

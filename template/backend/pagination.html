@@ -2,17 +2,24 @@
 {{with $.Data}}
 <ul class="pagination">
 {{- if .IsPosition -}}
-  {{- $isFirst := or (eq .Position ``) (eq .Position `0`) -}}
+  {{- $isFirst := .IsFirst -}}
   {{- if not $isFirst -}}
-  <li class="prev wd-{{if not .HasNext}}200{{else}}100{{end}}">
+  <li class="prev wd-100">
     <a href="{{.URL ``}}" aria-label="First"{{if $pjax}} data-pjax="{{$pjax}}" data-keepjs="true"{{end}}>
     {{`第一页`|$.T}}
     </a>
   </li>
   {{- end -}}
+  {{- if .HasPrev -}}
+  <li class="next wd-100">
+    <a href="{{.URL .PrevPosition}}" offset="{{.PrevPosition}}" aria-label="Next"{{if $pjax}} data-pjax="{{$pjax}}" data-keepjs="true"{{end}} style="cursor:pointer">
+    {{`上一页`|$.T}}
+    </a>
+  </li>
+  {{- end -}}
   {{- if .HasNext -}}
-  <li class="next active wd-{{if $isFirst}}200{{else}}100{{end}}">
-    <a href="{{.URL .NextPosition}}" aria-label="Next"{{if $pjax}} data-pjax="{{$pjax}}" data-keepjs="true"{{end}} style="cursor:pointer">
+  <li class="next active {{if $isFirst}}wd-200{{else}}wd-100{{end}}">
+    <a href="{{.URL .NextPosition}}" offset="{{.NextPosition}}" aria-label="Next"{{if $pjax}} data-pjax="{{$pjax}}" data-keepjs="true"{{end}} style="cursor:pointer">
     {{`下一页`|$.T}}
     </a>
   </li>
@@ -20,27 +27,27 @@
 {{- else -}}
     {{- $page := .Page -}}
     <li class="prev{{if eq $page 1}} disabled{{end}}">
-        <a href="{{.URL 1}}"{{if $pjax}} data-pjax="{{$pjax}}" data-keepjs="true"{{end}}>
-            {{"首页"|$.T}}
+        <a href="{{.URL 1}}" page="1"{{if $pjax}} data-pjax="{{$pjax}}" data-keepjs="true"{{end}}>
+            {{"#paging#首页"|$.T}}
         </a>
     </li>
     <li class="prev{{if eq $page 1}} disabled{{end}}">
-        <a href="{{.URL .PrevPage}}"{{if $pjax}} data-pjax="{{$pjax}}" data-keepjs="true"{{end}}>
+        <a href="{{.URL .PrevPage}}" page="{{.PrevPage}}"{{if $pjax}} data-pjax="{{$pjax}}" data-keepjs="true"{{end}}>
             <span class="fa fa-angle-left"></span>&nbsp;{{"上一页"|$.T}}
         </a>
     </li>
     {{- range $k,$v := .List -}}
     <li{{if eq $v $page}} class="active"{{end}}>
-        <a href="{{$.Data.URL $v}}"{{if $pjax}} data-pjax="{{$pjax}}" data-keepjs="true"{{end}}>{{$v}}</a>
+        <a href="{{$.Data.URL $v}}" page="{{$v}}"{{if $pjax}} data-pjax="{{$pjax}}" data-keepjs="true"{{end}}>{{$v}}</a>
     </li>
     {{- end -}}
     <li class="next{{if ge $page .Pages}} disabled{{end}}">
-        <a href="{{.URL .NextPage}}"{{if $pjax}} data-pjax="{{$pjax}}" data-keepjs="true"{{end}}>
+        <a href="{{.URL .NextPage}}" page="{{.NextPage}}"{{if $pjax}} data-pjax="{{$pjax}}" data-keepjs="true"{{end}}>
             {{"下一页"|$.T}}&nbsp;<span class="fa fa-angle-right"></span>
         </a>
     </li>
     <li class="next{{if ge $page .Pages}} disabled{{end}}">
-        <a href="{{.URL .Pages}}"{{if $pjax}} data-pjax="{{$pjax}}" data-keepjs="true"{{end}}>
+        <a href="{{.URL .Pages}}" page="{{.Pages}}"{{if $pjax}} data-pjax="{{$pjax}}" data-keepjs="true"{{end}}>
             {{"末页"|$.T}}
         </a>
     </li>

@@ -1,5 +1,4 @@
-{{Extend "layout"}}
-
+{{Strip}}{{Extend "layout"}}
 {{Block "title"}}{{$.Stored.data.Type}} - {{"云存储文件管理"|$.T}}{{/Block}}
 {{Block "breadcrumb"}}
 {{Super}}
@@ -28,7 +27,7 @@
 	<div class="col-md-12">
 		<div class="block-flat no-padding">
 			<div class="header">
-				<a href="javascript:;" class="btn btn-danger pull-right" onclick="App.removeSelected('input:checkbox[name=\'path[]\']','path','cloud/storage_file?id={{$id}}&do=delete');">
+				<a href="javascript:;" class="btn btn-danger pull-right" data-method="post" onclick="App.removeSelected2(this,'input:checkbox[name=\'path[]\']','path','cloud/storage_file?id={{$id}}&do=delete');">
 					<i class="fa fa-trash-o"></i>
 					{{"删除选中"|$.T}}
 				</a>
@@ -48,6 +47,10 @@
 					<button type="button" id="mkdirBtn" class="btn btn-success" data-content="{{`在当前目录下新建文件夹`|$.T}}" data-popover="popover" data-container="body" data-trigger="hover" data-placement="top" data-url="{{BackendURL}}/cloud/storage_file?id={{$id}}&do=mkdir&path={{$pathPrefix}}" onclick="fileMkdir(this)">
                         <i class="fa fa-plus"></i>
                         {{"新建文件夹"|$.T}}
+                    </button>
+					<button type="button" id="createFileBtn" class="btn btn-warning" data-content="{{`在当前目录下新建文件`|$.T}}" data-popover="popover" data-container="body" data-trigger="hover" data-placement="top" data-url="{{BackendURL}}/cloud/storage_file?id={{$id}}&do=createFile&path={{$pathPrefix}}" onclick="fileCreate(this)">
+                        <i class="fa fa-plus"></i>
+                        {{"新建文件"|$.T}}
                     </button>
                     <span class="input-group" style="padding-left:10px">
                         <input type="text" id="query-current-path" name="query" class="form-control typeahead" required="required" value="{{$.Form `query`}}" data-provide="typeahead">
@@ -100,14 +103,13 @@
                                 <a href="{{BackendURL}}/cloud/storage_file?id={{$id}}&path={{$pathPrefix}}{{$v.Name}}&engine={{$engine}}">{{$v.Name}}</a>
                                 {{- else -}}
                                 {{- $fileType := FileTypeByName $v.Name -}}
-                                <i class="fa fa-{{FileTypeIcon $fileType}}"></i>
+                                <i class="fa fa-{{FileTypeIcon $fileType}}"></i>&nbsp;
                                 {{- if eq $fileType `image` -}}
                                 <a class="pull-right" href="{{BackendURL}}/cloud/storage_file?id={{$id}}&do=download&inline=1&path={{$pathPrefix}}{{$v.Name}}&engine={{$engine}}" target="_blank"><img src="{{BackendURL}}/cloud/storage_file?id={{$id}}&do=download&inline=1&path={{$pathPrefix}}{{$v.Name}}&engine={{$engine}}" style="max-width:100px;max-height:30px;" class="previewable" /></a>
                                 {{- end -}}
                                 <a href="{{BackendURL}}/cloud/storage_file?id={{$id}}&do=download&path={{$pathPrefix}}{{$v.Name}}&engine={{$engine}}">{{$v.Name}}</a>
                                 {{- end -}}
-                                &nbsp;
-                                <a href="javascript:;" title="{{`重命名`|$.T}}" data-url="{{BackendURL}}/cloud/storage_file?id={{$id}}&do=rename&path={{$pathPrefix}}{{$v.Name}}&engine={{$engine}}" onclick="fileRename(this,'{{$pathPrefix}}{{$v.Name}}',{{$v.IsDir}})" data-toggle="tooltip">
+                                &nbsp;<a href="javascript:;" title="{{`重命名`|$.T}}" data-url="{{BackendURL}}/cloud/storage_file?id={{$id}}&do=rename&path={{$pathPrefix}}{{$v.Name}}&engine={{$engine}}" onclick="fileRename(this,'{{$pathPrefix}}{{$v.Name}}',{{$v.IsDir}})" data-toggle="tooltip">
                                 <i class="fa fa-pencil"></i>
                                 </a>
                             </td>
@@ -127,27 +129,24 @@
                                 <a title="{{`删除`|$.T}}" class="label label-danger" href="{{BackendURL}}/cloud/storage_file?id={{$id}}&do=delete&path={{$pathPrefix}}{{$v.Name}}&engine={{$engine}}" onclick="return confirm('{{$.T `真的要删除“%v”吗？` $v.Name}}');" data-toggle="tooltip">
                                 <i class="fa fa-times"></i>
                                 </a>
-                                {{- if not $v.IsDir}}
-                                &nbsp;
-                                <a title="{{`下载`|$.T}}" class="label label-info" href="{{BackendURL}}/cloud/storage_file?id={{$id}}&do=download&path={{$pathPrefix}}{{$v.Name}}&engine={{$engine}}" data-toggle="tooltip">
+                                {{- if not $v.IsDir -}}
+                                &nbsp;<a title="{{`下载`|$.T}}" class="label label-info" href="{{BackendURL}}/cloud/storage_file?id={{$id}}&do=download&path={{$pathPrefix}}{{$v.Name}}&engine={{$engine}}" data-toggle="tooltip">
                                 <i class="fa fa-cloud-download"></i>
                                 </a>
-                                {{- end}}
-                                {{- if not $v.IsDir}}
-                                {{- if call $.Func.Editable $v.Name}}
-                                &nbsp;
-                                <a title="{{`编辑`|$.T}}" class="label label-success" href="javascript:;" data-url="{{BackendURL}}/cloud/storage_file?id={{$id}}&do=edit&path={{$pathPrefix}}{{$v.Name}}&engine={{$engine}}" onclick="fileEdit(this,'{{$v.Name}}')" data-toggle="tooltip">
+                                {{- end -}}
+                                {{- if not $v.IsDir -}}
+                                {{- if call $.Func.Editable $v.Name -}}
+                                &nbsp;<a title="{{`编辑`|$.T}}" class="label label-success" href="javascript:;" data-url="{{BackendURL}}/cloud/storage_file?id={{$id}}&do=edit&path={{$pathPrefix}}{{$v.Name}}&engine={{$engine}}" onclick="fileEdit(this,'{{$v.Name}}')" data-toggle="tooltip">
                                 <i class="fa fa-pencil"></i>
                                 </a>
-                                {{- end}}
-                                {{- $mediaMime:=call $.Func.Playable $v.Name}}
-                                {{- if $mediaMime}}
-                                &nbsp;
-                                <a title="{{`播放`|$.T}}" class="label label-primary" href="javascript:;" playable data-mime="{{$mediaMime}}" data-name="{{$v.Name}}" data-url="{{BackendURL}}/cloud/storage_file?id={{$id}}&do=download&inline=1&path={{$pathPrefix}}{{$v.Name}}&engine={{$engine}}" onclick="filePlay(this)" data-toggle="tooltip">
+                                {{- end -}}
+                                {{- $mediaMime:=call $.Func.Playable $v.Name -}}
+                                {{- if $mediaMime -}}
+                                &nbsp;<a title="{{`播放`|$.T}}" class="label label-primary" href="javascript:;" playable data-mime="{{$mediaMime}}" data-name="{{$v.Name}}" data-url="{{BackendURL}}/cloud/storage_file?id={{$id}}&do=download&inline=1&path={{$pathPrefix}}{{$v.Name}}&engine={{$engine}}" onclick="filePlay(this)" data-toggle="tooltip">
                                 <i class="fa fa-play"></i>
                                 </a>
-                                {{- end}}
-                                {{- end}}
+                                {{- end -}}
+                                {{- end -}}
                             </td>
 						</tr>
                         {{- end -}}
@@ -169,11 +168,11 @@
 {{Include "filemanager/file.script"}}
 <script type="text/javascript">
 function uploadURL(currentPath){
-    return BACKEND_URL+'/cloud/storage_file?id={{$id}}&do=upload&path='+encodeURIComponent(currentPath);
+    return BACKEND_URL+'/cloud/storage_file?id={{$id}}&do=upload&path='+encodeURIComponent(currentPath)+App.appendNotifyClientID('&');
 }
 function initDropzone(options) {
     App.editor.dropzone('#multi-upload-dropzone',$.extend({},options,{
-        url:uploadURL('{{$.Stored.path}}'),
+        url:function(){return uploadURL('{{$.Stored.path}}')},
         acceptedFiles:'',
         dictDefaultMessage:'{{"可以把文件拖到这里来进行上传哦"|$.T}}'
     }))
@@ -187,5 +186,6 @@ $(function(){
     })
 })
 </script>
-<script type="text/javascript" src="{{AssetsURL}}/js/behaviour/page/file.min.js"></script>
+<script type="text/javascript" src="{{AssetsURL}}/js/behaviour/page/file.min.js?t={{BuildTime}}"></script>
 {{/Block}}
+{{/Strip}}

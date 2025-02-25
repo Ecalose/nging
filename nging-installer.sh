@@ -8,7 +8,7 @@
 
 osname=`uname -s`
 arch=`uname -m`
-version="5.2.6"
+version="5.2.7"
 
 if [ "$2" != "" ] && [ "$2" != "-" ]; then
     version="$2"
@@ -18,7 +18,7 @@ url="https://img.nging.coscms.com/nging/v${version}/"
 savedir="nging"
 
 case "$arch" in
-    "x86_64") 
+    "x86_64"|"amd64") 
         arch="amd64"
         ;;
     "i386"|"i686") 
@@ -52,6 +52,9 @@ case $osname in
         ;;
     "Linux") 
         osname="linux"
+        ;; 
+    "FreeBSD") 
+        osname="freebsd"
         ;; 
     *)
         echo "Unsupported System:${osname}"
