@@ -36,28 +36,28 @@ import (
 	"github.com/admpub/errors"
 	imageproxy "github.com/admpub/imageproxy"
 	"github.com/admpub/log"
-	"github.com/admpub/nging/v5/application/handler"
-	"github.com/admpub/nging/v5/application/library/common"
-	uploadLibrary "github.com/admpub/nging/v5/application/library/upload"
-	modelFile "github.com/admpub/nging/v5/application/model/file"
-	"github.com/admpub/nging/v5/application/registry/upload"
-	uploadChecker "github.com/admpub/nging/v5/application/registry/upload/checker"
-	"github.com/admpub/nging/v5/application/registry/upload/convert"
-	uploadPrepare "github.com/admpub/nging/v5/application/registry/upload/prepare"
-	"github.com/admpub/nging/v5/application/registry/upload/thumb"
+	"github.com/coscms/webcore/library/backend"
+	"github.com/coscms/webcore/library/nerrors"
+	uploadLibrary "github.com/coscms/webcore/library/upload"
+	modelFile "github.com/coscms/webcore/model/file"
+	"github.com/coscms/webcore/registry/upload"
+	uploadChecker "github.com/coscms/webcore/registry/upload/checker"
+	"github.com/coscms/webcore/registry/upload/convert"
+	uploadPrepare "github.com/coscms/webcore/registry/upload/prepare"
+	"github.com/coscms/webcore/registry/upload/thumb"
 )
 
 // Crop 图片裁剪
 func Crop(ctx echo.Context) error {
 	ownerType := `user`
-	user := handler.User(ctx)
+	user := backend.User(ctx)
 	var ownerID uint64
 	if user != nil {
 		ownerID = uint64(user.Id)
 	}
 	if ownerID < 1 {
 		ctx.Data().SetError(ctx.E(`请先登录`))
-		return ctx.Redirect(handler.URLFor(`/login`))
+		return ctx.Redirect(backend.URLFor(`/login`))
 	}
 	return CropByOwner(ctx, ownerType, ownerID)
 }
@@ -80,6 +80,9 @@ func CropByOwner(ctx echo.Context, ownerType string, ownerID uint64) error {
 		thumbHeight = thumbWidth
 	}
 	srcURL := ctx.Form(`src`)
+	if len(srcURL) == 0 {
+		return ctx.NewError(code.InvalidParameter, `原图地址不正确`).SetZone(`src`)
+	}
 	srcURL, err = com.URLDecode(srcURL)
 	if err != nil {
 		return err
@@ -98,6 +101,10 @@ func CropByOwner(ctx echo.Context, ownerType string, ownerID uint64) error {
 	subdir := ctx.Form(`subdir`, fileM.Subdir)
 	if len(subdir) == 0 {
 		subdir = uploadLibrary.ParseSubdir(srcURL)
+	}
+	subdir, err = com.URLDecode(subdir)
+	if err != nil {
+		return err
 	}
 	if !upload.AllowedSubdir(subdir) {
 		return ctx.NewError(code.InvalidParameter, `subdir参数值“%s”未被登记`, subdir)
@@ -146,7 +153,7 @@ func CropByOwner(ctx echo.Context, ownerType string, ownerID uint64) error {
 		//editable = true //TODO: 验证
 	} */
 	if !editable {
-		return common.ErrUserNoPerm
+		return nerrors.ErrUserNoPerm
 	}
 
 	x := ctx.Formx(`x`).Float64()
@@ -201,18 +208,18 @@ func CropByOwner(ctx echo.Context, ownerType string, ownerID uint64) error {
 				defer reader.Close()
 			}
 			if err != nil {
-				log.Error(err)
+				log.Errorf(`%v: %s`, err, srcURL)
 				return ``
 			}
 			originMd5, err := checksum.MD5sumReader(reader)
 			if err != nil {
-				log.Error(err)
+				log.Errorf(`failed to checksum.MD5sumReader(avatar=%q): %v`, srcURL, err)
 				return ``
 			}
 			size := len(originMd5)
 			_, _, err = storer.Put(putFile, bytes.NewBufferString(originMd5), int64(size))
 			if err != nil {
-				log.Error(err)
+				log.Errorf(`failed to storer.Put(%q): %v`, putFile, err)
 			}
 			return originMd5
 		}
@@ -237,6 +244,9 @@ func CropByOwner(ctx echo.Context, ownerType string, ownerID uint64) error {
 				return err
 			}
 			reader, err := storer.Get(srcURL)
+			if err != nil {
+				return err
+			}
 			if reader != nil {
 				defer reader.Close()
 			}
@@ -252,7 +262,7 @@ func CropByOwner(ctx echo.Context, ownerType string, ownerID uint64) error {
 				size := len(originMd5)
 				_, _, err = storer.Put(putFile, bytes.NewBufferString(originMd5), int64(size))
 				if err != nil {
-					log.Error(err)
+					log.Errorf(`failed to storer.Put(%q): %v`, putFile, err)
 				}
 				return originMd5
 			}

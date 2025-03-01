@@ -19,10 +19,11 @@
 package manager
 
 import (
-	"github.com/admpub/nging/v5/application/handler"
-	"github.com/admpub/nging/v5/application/library/common"
-	"github.com/admpub/nging/v5/application/library/config"
-	"github.com/admpub/nging/v5/application/registry/settings"
+	"github.com/coscms/webcore/library/backend"
+	"github.com/coscms/webcore/library/common"
+	"github.com/coscms/webcore/library/config"
+	"github.com/coscms/webcore/library/errorslice"
+	"github.com/coscms/webcore/registry/settings"
 	"github.com/webx-top/com"
 	"github.com/webx-top/echo"
 )
@@ -30,7 +31,7 @@ import (
 func Settings(ctx echo.Context) error {
 	//panic(echo.Dump(settings.ConfigAsStore(), false))
 	//return ctx.JSON(config.FromFile())
-	errs := common.NewErrors()
+	errs := errorslice.New()
 	group := ctx.Form(`group`, `base`)
 	var groups []string
 	if len(group) > 0 {
@@ -64,8 +65,8 @@ func Settings(ctx echo.Context) error {
 		if err != nil {
 			goto END
 		}
-		handler.SendOk(ctx, ctx.T(`操作成功`))
-		return ctx.Redirect(handler.URLFor(`/manager/settings?group=` + group))
+		common.SendOk(ctx, ctx.T(`操作成功`))
+		return ctx.Redirect(backend.URLFor(`/manager/settings?group=` + group))
 	}
 
 END:
@@ -80,5 +81,5 @@ END:
 	ctx.SetFunc(`getSettings`, settings.Settings)
 	ctx.SetFunc(`hasConfigGroup`, settings.ConfigHasGroup)
 	ctx.SetFunc(`hasConfigKey`, settings.ConfigHasKey)
-	return ctx.Render(`/manager/settings`, handler.Err(ctx, errs.ToError()))
+	return ctx.Render(`/manager/settings`, common.Err(ctx, errs.ToError()))
 }

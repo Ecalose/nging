@@ -26,14 +26,14 @@ import (
 	"github.com/webx-top/echo/code"
 	"github.com/webx-top/echo/param"
 
-	"github.com/admpub/nging/v5/application/handler"
 	"github.com/admpub/nging/v5/application/handler/manager/file"
-	modelFile "github.com/admpub/nging/v5/application/model/file"
-	"github.com/admpub/nging/v5/application/model/file/storer"
+	"github.com/coscms/webcore/library/backend"
+	modelFile "github.com/coscms/webcore/model/file"
+	"github.com/coscms/webcore/model/file/storer"
 
-	_ "github.com/admpub/nging/v5/application/registry/upload/client"
-	uploadPipe "github.com/admpub/nging/v5/application/registry/upload/pipe"
-	uploadPrepare "github.com/admpub/nging/v5/application/registry/upload/prepare"
+	_ "github.com/coscms/webcore/registry/upload/client"
+	uploadPipe "github.com/coscms/webcore/registry/upload/pipe"
+	uploadPrepare "github.com/coscms/webcore/registry/upload/prepare"
 )
 
 var (
@@ -56,14 +56,14 @@ func StorerEngine() storer.Info {
 // Upload 上传文件
 func Upload(ctx echo.Context) error {
 	ownerType := `user`
-	user := handler.User(ctx)
+	user := backend.User(ctx)
 	var ownerID uint64
 	if user != nil {
 		ownerID = uint64(user.Id)
 	}
 	if ownerID < 1 {
 		ctx.Data().SetError(ctx.E(`请先登录`))
-		return ctx.Redirect(handler.URLFor(`/login`))
+		return ctx.Redirect(backend.URLFor(`/login`))
 	}
 	return UploadByOwner(ctx, ownerType, ownerID)
 }
@@ -98,7 +98,7 @@ func UploadByOwner(ctx echo.Context, ownerType string, ownerID uint64, readBefor
 	fileM := prepareData.MakeModel(ownerType, ownerID)
 	_, err = prepareData.SetMultiple(clientName == `default`).Save(fileM, clientName, client)
 	if err != nil {
-		log.Error(err.Error())
+		log.Errorf(`failed to prepareData.Save(%q): %v`, fileM.SavePath, err.Error())
 		return client.Response()
 	}
 	if len(pipe) > 0 {

@@ -1,59 +1,64 @@
-{{if $.Data.jsURL}}<script src="{{$.Data.jsURL}}" async defer></script>{{end}}
+{{Strip}}
+{{- if $.Data.jsURL}}<script src="{{$.Data.jsURL}}"></script>{{end -}}
 {{- $themeColor := $.ThemeColor -}}
-{{if eq $.Data.provider `turnstile`}}
-<div class="form-control-plaintext xs-padding-top bg-fc">
+{{- if eq $.Data.provider `turnstile` -}}
+<div>
     <div class="captcha-loading text-center" style="position:relative"><i class="fa fa-spinner fa-spin"></i> {{`验证加载中，请稍候...`|$.T}}</div>
     <div style="position:relative;z-index:2;margin-top:-20px;min-height:25px">
         <input type="hidden" name="captchaId" value="{{$.Data.captchaID}}" />
-        <div class="cf-turnstile text-center" id="turnstile-{{$.Data.captchaID}}" data-sitekey="{{$.Data.siteKey}}" data-theme="{{if eq $themeColor `dark`}}dark{{else}}light{{end}}"></div>
+        <div class="cf-turnstile text-center" id="turnstile-{{$.Data.captchaID}}" data-sitekey="{{$.Data.siteKey}}" data-theme="{{if eq $themeColor `dark`}}dark{{else}}light{{end}}" data-size="flexible"></div>
         <input type="hidden" id="turnstile-{{$.Data.captchaID}}-extend" disabled />
     </div>
 </div>
 <script>
-window["windowOriginalOnload{{$.Data.captchaID}}"]=window.onload;
-window.onload=function(){
-    var $form=$('#turnstile-{{$.Data.captchaID}}').closest('form');
+window.addEventListener('load', function(){
+    var id='#turnstile-{{$.Data.captchaID}}',$box=$(id);
+    var $form=$box.closest('form');
     $form.on('submit',function(e){
-        if($('#turnstile-{{$.Data.captchaID}}').data('lastGeneratedAt')>(new Date()).getTime()-290) {
-            $('#turnstile-{{$.Data.captchaID}}').data('lastGeneratedAt',0);
+        if($box.data('lastGeneratedAt')>(new Date()).getTime()-290) {
+            $box.data('lastGeneratedAt',0);
             return true;
         }
         window.setTimeout(function(){
-            turnstile.reset('#turnstile-{{$.Data.captchaID}}');
+            turnstile.reset(id);
         },1000);
-        $('#turnstile-{{$.Data.captchaID}}').data('lastGeneratedAt',(new Date()).getTime());
+        $box.data('lastGeneratedAt',(new Date()).getTime());
     });
-    window["windowOriginalOnload{{$.Data.captchaID}}"] && window["windowOriginalOnload{{$.Data.captchaID}}"].apply(this,arguments);
-}
+})
 </script>
-{{else}}
+{{- else -}}
+<div class="form-control-plaintext no-padding-top">
+<div class="captcha-loading text-center wd-100p" id="recaptcha-{{$.Data.captchaID}}-loading" data-success-tips="{{`验证加载成功`|$.T}}"><i class="fa fa-spinner fa-spin"></i> {{`验证加载中，请稍候...`}}</div>
 <input type="hidden" name="captchaId" value="{{$.Data.captchaID}}" />
-<input type="hidden" id="recaptcha-{{$.Data.captchaID}}" name="g-recaptcha-response" value="" />
+<input type="hidden" id="recaptcha-{{$.Data.captchaID}}" name="{{$.Data.captchaName}}" value="" />
 <input type="hidden" id="recaptcha-{{$.Data.captchaID}}-extend" disabled />
+</div>
 <script>
-window["windowOriginalOnload{{$.Data.captchaID}}"]=window.onload;
-window.onload=function(){
+window.addEventListener('load', function(){
+    var id='#recaptcha-{{$.Data.captchaID}}';
     grecaptcha.ready(function() {
       grecaptcha.execute('{{$.Data.siteKey}}', {action: 'submit'}).then(function(token) {
-        $('#recaptcha-{{$.Data.captchaID}}').val(token);
-        $('#recaptcha-{{$.Data.captchaID}}').data('lastGeneratedAt',(new Date()).getTime());
+        $(id).val(token);
+        $(id).data('lastGeneratedAt',(new Date()).getTime());
+        var $loading=$('#recaptcha-{{$.Data.captchaID}}-loading');
+        if($loading.length>0)$loading.html('<i class="fa fa-check text-success"></i> '+$loading.data('success-tips'));
       });
     });
-    var $submit=$('#recaptcha-{{$.Data.captchaID}}').closest('form').find(':submit');
+    var $submit=$(id).closest('form').find(':submit');
     $submit.on('click',function(e){
-        if($('#recaptcha-{{$.Data.captchaID}}').val() && $('#recaptcha-{{$.Data.captchaID}}').data('lastGeneratedAt')>(new Date()).getTime()-110) {
-            $('#recaptcha-{{$.Data.captchaID}}').data('lastGeneratedAt',0);
+        if($(id).val() && $(id).data('lastGeneratedAt')>(new Date()).getTime()-110) {
+            $(id).data('lastGeneratedAt',0);
             return true;
         }
         var $this=$(this);
         e.preventDefault();
         grecaptcha.execute('{{$.Data.siteKey}}', {action: 'submit'}).then(function(token) {
-          $('#recaptcha-{{$.Data.captchaID}}').val(token);
-          $('#recaptcha-{{$.Data.captchaID}}').data('lastGeneratedAt',(new Date()).getTime());
+          $(id).val(token);
+          $(id).data('lastGeneratedAt',(new Date()).getTime());
           $this.trigger('click');
         });
     });
-    window["windowOriginalOnload{{$.Data.captchaID}}"] && window["windowOriginalOnload{{$.Data.captchaID}}"].apply(this,arguments);
-}
+})
 </script>
-{{end}}
+{{- end -}}
+{{/Strip}}

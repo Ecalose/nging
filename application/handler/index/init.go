@@ -21,29 +21,34 @@ package index
 import (
 	"github.com/webx-top/echo"
 
-	"github.com/admpub/nging/v5/application/handler"
-	"github.com/admpub/nging/v5/application/middleware"
-	"github.com/admpub/nging/v5/application/registry/dashboard"
-	"github.com/admpub/nging/v5/application/registry/route"
-	"github.com/admpub/nging/v5/application/request"
+	"github.com/coscms/webcore/middleware"
+	"github.com/coscms/webcore/registry/route"
+	"github.com/coscms/webcore/request"
+
+	// oauth2server
+	"github.com/coscms/webcore/library/backend/oauth2server/initialize"
+	"github.com/coscms/webcore/library/httpserver"
 )
 
 func init() {
-	handler.Register(func(e echo.RouteRegister) {
+	initialize.Init(Login, Logout)
+	route.Register(func(e echo.RouteRegister) {
 		e.Route("GET", ``, Index)
 		e.Route("GET", `/`, Index)
-		e.Route("GET", `/project/:ident`, Project).SetMetaKV(route.PermPublicKV())
+		e.Route("GET", `/project/:ident`, Project).SetMetaKV(httpserver.PermPublicKV())
 		e.Route("GET", `/index`, Index)
 		e.Route("GET,POST", `/login`, Login)
-		e.Route("GET,POST", `/register`, handler.WithRequest(Register, request.Register{}, `POST`))
+		e.Route("GET,POST", `/register`, route.HandlerWithRequest(Register, request.Register{}, `POST`))
 		e.Route("GET", `/logout`, Logout)
-		if dashboard.TopButtonFindTmpl(`manager/topbutton/donation`) > -1 {
-			e.Route("GET", `/donation/:type`, Donation).SetMetaKV(route.PermGuestKV())
+		dashboard := httpserver.Backend.Dashboard
+		if dashboard.TopButtons.FindTmpl(`manager/topbutton/donation`) > -1 {
+			e.Route("GET", `/donation/:type`, Donation).SetMetaKV(httpserver.PermGuestKV())
 		}
 		//e.Route(`GET,POST`, `/ping`, Ping)
 		e.Get(`/icon`, Icon, middleware.AuthCheck)
 		e.Get(`/routeList`, RouteList, middleware.AuthCheck)
 		e.Get(`/routeNotin`, RouteNotin, middleware.AuthCheck)
 		e.Get(`/navTree`, NavTree, middleware.AuthCheck)
+		e.Get(`/headers`, Headers, middleware.AuthCheck)
 	})
 }

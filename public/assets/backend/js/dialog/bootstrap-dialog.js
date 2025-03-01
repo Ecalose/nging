@@ -40,7 +40,7 @@
      * ================================================ */
     var Modal = $.fn.modal.Constructor;
     var BootstrapDialogModal = function(element, options) {
-        if (/4\.0\.\d+/.test($.fn.modal.Constructor.VERSION)) {
+        if (/^4\./.test($.fn.modal.Constructor.VERSION)) {
             return new Modal(element, options);
         } else {
             Modal.call(this, element, options);
@@ -50,15 +50,15 @@
         var version = null;
         if (typeof $.fn.modal.Constructor.VERSION === 'undefined') {
             version = 'v3.1';
-        } else if (/3\.2\.\d+/.test($.fn.modal.Constructor.VERSION)) {
+        } else if (/^3\.2\.\d+/.test($.fn.modal.Constructor.VERSION)) {
             version = 'v3.2';
-        } else if (/3\.3\.[1,2]/.test($.fn.modal.Constructor.VERSION)) {
+        } else if (/^3\.3\.[1,2]/.test($.fn.modal.Constructor.VERSION)) {
             version = 'v3.3';  // v3.3.1, v3.3.2
-        } else if (/4\.0\.\d+/.test($.fn.modal.Constructor.VERSION)) {
+        } else if (/^4\.0\.\d+/.test($.fn.modal.Constructor.VERSION)) {
             version = 'v4.0';
-        } else if (/4\.1\.\d+/.test($.fn.modal.Constructor.VERSION)) {
+        } else if (/^4\.1\.\d+/.test($.fn.modal.Constructor.VERSION)) {
             version = 'v4.1';
-        } else if (/4\.\d\.\d+/.test($.fn.modal.Constructor.VERSION)) {
+        } else if (/^4\.\d\.\d+/.test($.fn.modal.Constructor.VERSION)) {
             version = 'v4.x';
         } else {
             version = 'v3.3.4';
@@ -251,6 +251,7 @@
         autodestroy: true,
         draggable: false,
         animate: true,
+        enableScript: false,
         description: '',
         tabindex: -1
     };
@@ -378,7 +379,25 @@
         getModalBackdrop: function ($modal) {
             return $($modal.data('bs.modal')._backdrop);
         },
-        handleModalBackdropEvent: BootstrapDialog.METHODS_TO_OVERRIDE['v3.1']['handleModalBackdropEvent'],
+        handleModalBackdropEvent: function () {
+            var that = this;
+            this.getModal().on('click', {dialog: this}, function (event) {
+                if(event.target === this && event.data.dialog.isClosable() && event.data.dialog.canCloseByBackdrop()) {
+                    event.data.dialog.close();
+                    
+                    // FIX
+                    var $m = $(this).data('bs.modal');
+                    if($m && typeof $m._isTransitioning != 'undefined' && $m._isTransitioning){
+                        var cleanup=function(){
+                            $m._hideModal(event);
+                        }
+                        that.isAnimate()?window.setTimeout(cleanup,300):cleanup();
+                    }
+                }
+            });
+
+            return this;
+        },
         updateZIndex: BootstrapDialog.METHODS_TO_OVERRIDE['v3.1']['updateZIndex'],
         open: BootstrapDialog.METHODS_TO_OVERRIDE['v3.1']['open'],
         getModalForBootstrapDialogModal : function () {
@@ -642,7 +661,27 @@
         updateMessage: function () {
             if (this.isRealized()) {
                 var message = this.createDynamicContent(this.getMessage());
+                var scripts = [];
+                if(this.options.enableScript){
+                    var $h=$(message);
+                    scripts=$h.find('script');
+                    $h.find('script').remove();
+                    message=$h.html();
+                }
                 this.getModalBody().find('.' + this.getNamespace('message')).html('').append(message);
+                if(scripts && scripts.length>0){
+                    var scriptText = '';
+                    for(var i=0;i<scripts.length;i++){
+                        var script=scripts[i];
+                        if(script.src){
+                            if($('script[src$="'+script.src+'"]').length<1) $('body').append('<script type="text/javascript" src="'+script.src+'"></script>');
+                        }else if(script.text){
+                            scriptText+='<script type="text/javascript">'+script.text+'</script>';
+                        }
+                    }
+                    if(scriptText) this.getModalBody().data('script-text',scriptText);
+                }
+                
             }
 
             return this;
@@ -1156,7 +1195,12 @@
             });
             this.getModal().on('shown.bs.modal', {dialog: this}, function (event) {
                 var dialog = event.data.dialog;
-                dialog.isModalEvent(event) && typeof dialog.options.onshown === 'function' && dialog.options.onshown(dialog);
+                if(dialog.isModalEvent(event)){
+                    if(dialog.getModalBody().data('script-text')){
+                        $('body').append(dialog.getModalBody().data('script-text'));
+                    }
+                    typeof dialog.options.onshown === 'function' && dialog.options.onshown(dialog);
+                }
             });
             this.getModal().on('hide.bs.modal', {dialog: this}, function (event) {
                 var dialog = event.data.dialog;
@@ -1281,7 +1325,7 @@
         close: function () {
             !this.isRealized() && this.realize();
             this.getModal().modal('hide');
-
+            
             return this;
         }
     };

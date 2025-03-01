@@ -23,20 +23,35 @@ import (
 
 	"github.com/webx-top/com"
 
-	"github.com/admpub/nging/v5/application/handler"
-	premLib "github.com/admpub/nging/v5/application/library/perm"
-	"github.com/admpub/nging/v5/application/library/role"
-	"github.com/admpub/nging/v5/application/registry/navigate"
-	"github.com/admpub/nging/v5/application/registry/route"
+	"github.com/coscms/webcore/library/backend"
+	"github.com/coscms/webcore/library/httpserver"
+	"github.com/coscms/webcore/library/nerrors"
+	premLib "github.com/coscms/webcore/library/perm"
+	"github.com/coscms/webcore/library/role"
+	"github.com/coscms/webcore/registry/navigate"
+	"github.com/coscms/webcore/registry/route"
 	"github.com/webx-top/echo"
 )
 
 func RouteList(ctx echo.Context) error {
-	return ctx.JSON(handler.IRegister().Routes())
+	return ctx.JSON(route.IRegister().Routes())
 }
 
 func NavTree(ctx echo.Context) error {
 	return ctx.JSON(premLib.NavTreeCached())
+}
+
+func Headers(ctx echo.Context) error {
+	user := backend.User(ctx)
+	if user == nil {
+		return nerrors.ErrUserNotLoggedIn
+	}
+	if !role.IsFounder(user) {
+		return nerrors.ErrUserNoPerm.SetMessage(ctx.T(`此功能仅供网站创始人查看`))
+	}
+	headers := ctx.Request().Header().Std()
+	headers.Del(`Cookie`)
+	return ctx.JSON(headers)
 }
 
 // UnlimitedURLs 不用采用权限验证的路由前缀
@@ -50,13 +65,13 @@ var UnlimitedURLs = []string{
 }
 
 var HandlerPermissions = []string{
-	route.PermissionGuest,  // 游客可浏览
-	route.PermissionPublic, // 任意登录用户可浏览
+	httpserver.PermissionGuest,  // 游客可浏览
+	httpserver.PermissionPublic, // 任意登录用户可浏览
 }
 
 func RouteNotin(ctx echo.Context) error {
 	var unuse []string
-	for _, route := range handler.IRegister().Routes() {
+	for _, route := range route.IRegister().Routes() {
 		urlPath := route.Path
 		if len(urlPath) <= 1 {
 			continue

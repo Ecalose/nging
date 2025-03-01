@@ -19,7 +19,7 @@
 				<div class="form-group col-sm-3 no-margin xs-margin-top no-padding">
 				<div class="input-group">
 					<span class="input-group-addon">{{"文件名称"|$.T}}</span>
-					<input type="text" id="saveName" class="form-control" name="saveName" value="{{$.Form `saveName`}}">
+					<input type="text" id="saveName" class="form-control" name="saveName" value="{{$.Form `saveName`}}" onkeyup="if(event.keyCode==13)$('#search-form').submit()">
 				</div>
 				</div>
 				<div class="form-group col-sm-3 no-margin xs-margin-top no-padding">
@@ -31,7 +31,6 @@
 				<div class="form-group col-sm-2 no-margin xs-margin-top no-padding">
 				<div class="input-group">
 					<span class="input-group-addon no-padding no-border"><select name="ownerType" class="form-control" id="ownerType" onchange="ownerTypeChange(this)" style="width:100px">
-						<option value="">-{{"用户类型"|$.T}}-</option>
 						{{- $ownerType := $.Form "ownerType" -}}
 						<option value="user"{{if eq $ownerType `user`}} selected{{end}}>{{`后台用户`|$.T}}</option>
 						<option value="customer"{{if eq $ownerType `customer`}} selected{{end}}>{{`前台客户`|$.T}}</option>
@@ -103,7 +102,7 @@
 					<input type="file" multiple="true" id="input-file-upload" style="width:95px" />
 				</span>
 				{{- if not $dialog -}}
-				<a href="javascript:;" class="btn btn-danger pull-right" onclick="App.removeSelected('input:checkbox[name=\'id[]\']','id','{{BackendURL}}/manager/file/delete/0');">
+				<a href="javascript:;" class="btn btn-danger pull-right" data-method="post" onclick="App.removeSelected2(this,'input:checkbox[name=\'id[]\']','id','{{BackendURL}}/manager/file/delete/0');">
 					<i class="fa fa-trash-o"></i>
 					{{"删除选中"|$.T}}
 				</a>

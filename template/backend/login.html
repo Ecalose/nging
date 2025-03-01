@@ -2,6 +2,7 @@
 {{Extend "base"}}
 {{Block "description"}}{{"管理面板登录"|$.T}}{{/Block}}
 {{Block "title"}}{{"管理面板登录"|$.T}}{{/Block}}
+{{Block "themeColor"}}#26262E{{/Block}}
 {{Block "bodyAttr"}} class="texture"{{/Block}}
 {{Block "main"}}
 <div id="cl-wrapper" class="login-container">
@@ -53,7 +54,7 @@
 							<ul class="list-inline clearfix xs-padding-left">
 						{{- range $k,$v:=$oAuthAccounts -}}
 							<li class="pull-left no-padding-left">
-							<a class="btn btn-warning no-margin" href="{{BackendURL}}/oauth/login/{{$v.Name}}">
+							<a rel="nofollow" class="btn btn-warning no-margin" href="{{BackendURL}}/oauth/login/{{$v.Name}}">
 							{{- $title := $v.Extra.String `title` -}}
 							{{- if $title -}}
 							{{- $title -}}
@@ -71,7 +72,7 @@
 			</div>
 		</div>
 		<div class="text-center out-links">
-			<a href="https://github.com/admpub/nging" target="_blank">&copy; {{Now.Year}} {{Version}}</a>
+			<a href="{{OfficialHomepage}}" target="_blank">&copy; {{Now.Year}} {{Version}}</a>
 		</div>
 	</div> 
 

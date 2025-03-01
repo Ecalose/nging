@@ -6,7 +6,9 @@
 <link href="{{AssetsURL}}/js/fuelux/css/fuelux.min.css" rel="stylesheet">
 <link rel="stylesheet" type="text/css" href="{{AssetsURL}}/js/jquery.nanoscroller/nanoscroller.css" />
 <link rel="stylesheet" type="text/css" href="{{AssetsURL}}/js/bootstrap.slider/css/slider.css" />
+<!-- <link rel="stylesheet" type="text/css" href="{{AssetsURL}}/css/form/checkbox.min.css" /> -->
 {{/Block}}
+{{Block "themeColor"}}#26262E{{/Block}}
 {{Block "bodyAttr"}} class="texture"{{/Block}}
 {{Block "main"}}{{$data := $.Stored.data}}
 <div id="cl-wrapper" class="login-container">
@@ -94,7 +96,7 @@
 										<div class="col-sm-12">
 											<div class="input-group" data-toggle="tooltip" title="{{`数据库名称`|$.T}}">
 												<span class="input-group-addon"><i class="fa fa-folder"></i></span>
-												<input type="text" name="database" id="database-name" data-parsley-trigger="change" data-parsley-errors-container="#database-error" required placeholder="{{`数据库名称`|$.T}}" class="form-control" value="{{$data.Database|Default `nging`}}">
+												<input type="text" name="database" id="database-name" data-parsley-trigger="change" data-parsley-errors-container="#database-error" required placeholder="{{`数据库名称`|$.T}}" class="form-control" value="{{$data.Database|Default $.Stored.defaultDBName}}">
 											</div>
 											<div id="database-error"></div>
 										</div>
@@ -169,7 +171,28 @@
 											<div id="confirmPass-error"></div>
 										</div>
 									</div>
-
+									{{- $policy := call $.Func.policy -}}
+									{{- if $policy -}}
+									<div class="form-group">
+										<div class="col-sm-12">
+											<div>
+											<div class="checkbox no-padding-top">
+												<input type="checkbox" name="agreePolicy" value="1"{{if eq ($.Form `agreePolicy`) `1`}} checked{{end}} id="checkbox-agree-policy">
+												<label for="checkbox-agree-policy">
+													<small>&nbsp;{{"我已阅读并同意"|$.T}}</small>
+												</label>
+												<small>
+												{{- range $k, $v := $policy -}}
+													{{- if gt $k 0 -}}、{{- end -}}
+													<a href="javascript:;" data-toggle="modal" data-target="#policy-{{$k}}">{{$v.K|$.T}}</a>
+												{{- end -}}
+												</small>
+											</div>
+											<div id="policy-error"></div>
+											</div>
+										</div>
+									</div>
+									{{- end -}}
 
 
 
@@ -188,7 +211,7 @@
 								</div>
 
 								<div class="text-center">
-									<a href="https://github.com/admpub/nging" target="_blank">&copy; {{Now.Year}} {{Version}}</a>
+									<a href="{{OfficialHomepage}}" target="_blank">&copy; {{Now.Year}} {{Version}}</a>
 								</div>
 						</div><!-- .step-content -->
 					</form>
@@ -202,6 +225,27 @@
 </div><!-- .login-container -->
 {{/Block}}
 {{Block "footer"}}
+{{- $policy := call $.Func.policy -}}
+{{- if $policy -}}
+{{- range $k, $v := $policy -}}
+<div class="modal fade colored-header" id="policy-{{$k}}" tabindex="-1" role="dialog">
+	<div class="modal-dialog">
+	  <div class="modal-content">
+		<div class="modal-header">
+			<h3>{{- $v.K|$.T -}}</h3>
+			<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+		</div>
+		<div class="modal-body">
+			{{- $v.V|ToHTML -}}
+		</div>
+		<div class="modal-footer">
+		  <button type="button" class="btn btn-default" data-dismiss="modal">{{`关闭`|$.T}}</button>
+		</div>
+	  </div><!-- /.modal-content -->
+	</div><!-- /.modal-dialog -->
+  </div><!-- /.modal -->
+{{- end -}}
+{{- end -}}
 <script type="text/template" id="progress-template">
 	<div id="install-progress" style="position:absolute !important;z-index:9990;width:100%;height:100%;">
 		<div style="opacity:0.8;position:absolute !important;z-index:9999;width:100%;height:100%;background:#000;"></div>
@@ -271,9 +315,20 @@ $(function () {
 				break;
 		}
 	}).trigger('change');
+	$('#checkbox-agree-policy').on('click',function(){
+		if(this.checked){
+			$('#policy-error').hide();
+		}else{
+			$('#policy-error').show();
+		}
+	});
 	$('[data-toggle="tooltip"]').tooltip();
 	$('#form-setup').on('submit', function (e) {
 		e.preventDefault();
+		if($('#checkbox-agree-policy').length>0 && !$('#checkbox-agree-policy').prop('checked')){
+			$('#policy-error').html('<ul class="parsley-errors-list no-margin"><li><small>{{`👆必须勾选此项才能安装`|$.T}}</small></li></ul>').show();
+			return App.message({text:App.t('必须同意相关协议才能安装，请勾选'),type:'warning'});
+		}
 		$.post(window.location.href, $(this).serializeArray(), function (r) {
 			if (r.Code != 1) {
 				if ($('#install-progress').length > 0) $('#install-progress').remove();

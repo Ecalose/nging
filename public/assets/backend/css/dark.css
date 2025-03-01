@@ -1,5 +1,8 @@
 .dark-theme body,
-.dark-theme .cl-mcont,
+.dark-theme .cl-mcont {
+    background-color: #000;
+}
+
 .dark-theme .form-control,
 .dark-theme .tt-menu {
     background-color: #13151d;
@@ -40,9 +43,13 @@
     color: #555 !important
 }
 
-.dark-theme .sp_control_box,
+.dark-theme .sp_control_box,.dark-theme .sp_control_box:hover,
 .dark-theme div.sp_result_area div.sp_pagination>ul>li>a {
     background-color: #191c27;
+}
+
+.dark-theme div.sp_result_area div.sp_pagination>ul>li>a:hover{
+    color: #ccc;
 }
 
 .dark-theme div.sp_result_area div.sp_pagination>ul>li.pageInfoBox>a {
@@ -65,7 +72,9 @@
 }
 
 .dark-theme .btn-default,
-.dark-theme .btn-default:focus {
+.dark-theme .btn-default:focus,
+.btn-default.active.focus, .btn-default.active:focus, .btn-default.active:hover, .btn-default:active.focus, .btn-default:active:focus, .btn-default:active:hover, .open > .dropdown-toggle.btn-default.focus, .open > .dropdown-toggle.btn-default:focus, .open > .dropdown-toggle.btn-default:hover,
+.btn-default.active, .btn-default:active, .open > .dropdown-toggle.btn-default {
     background-color: #333;
     border-color: #222;
     color: #fff;
@@ -184,15 +193,9 @@
     color: #ccc;
     border: 0
 }
-
+.dark-theme .tab-container.tab-left .nav-tabs{background-color:#000} 
 .dark-theme .modal-content .modal-footer {
     background-color: #34363d;
-}
-
-.dark-theme .block .header,
-.dark-theme .block-flat .header,
-.dark-theme .widget-block .header {
-    background-color: #1f2126;
 }
 
 .dark-theme .page-aside {
@@ -284,7 +287,7 @@
 .dark-theme .dropdown-menu .divider,
 .dark-theme .nav:not(.navbar-nav)>li>a:focus,
 .dark-theme .nav:not(.navbar-nav)>li>a:hover {
-    background-color: #222;
+    background-color: #1f2126;
 }
 
 .dark-theme .navbar-default .navbar-nav>li.button .dropdown-menu li>a:hover {
@@ -329,7 +332,8 @@
 .dark-theme table td > span.text-black {
     color: #ccc
 }
-
+.dark-theme .app-nav .bg-white,
+.dark-theme .btn[data-toggle="collapse"] + .table-toolbar,
 .dark-theme .form-submit-group.always-bottom {
     background-color: #32343a;
     border-color: #222;
@@ -377,10 +381,14 @@
 .dark-theme .panel>.table+.panel-body,
 .dark-theme .panel>.table-responsive+.panel-body,
 .dark-theme .block-flat.no-padding table tr:last-child td,
-.dark-theme .block-flat.no-padding table tr:last-child th{
+.dark-theme .block-flat.no-padding table tr:last-child th
+.dark-theme .block table tr:last-child td,
+.dark-theme table .no-border-x tr:last-child td,
+.dark-theme table .no-border-y tr td:first-child,
+.dark-theme .block table tr:last-child th{
     border-color: #444 !important;
 }
-.dark-theme .block-flat.no-padding .content .pagination{box-shadow: 0 0 5px rgba(0,0,0,0.8);}
+.dark-theme .content .pagination{box-shadow: 0 0 5px rgba(0,0,0,0.8);}
 .dark-theme .panel {
     background-color: #272930;
 }
@@ -388,6 +396,9 @@
 .dark-theme .modal-footer,
 .dark-theme table td,
 .dark-theme table thead th,
+.dark-theme .page-aside.app .app-nav .title,
+.dark-theme .page-aside.email .mail-nav .title,
+.dark-theme .page-aside.tree .header,
 .dark-theme .form-horizontal.group-border-dashed .form-group {
     border-color: #000;
 }
@@ -396,8 +407,6 @@
 .dark-theme .block-flat .header,
 .dark-theme .widget-block .header,
 .dark-theme .block .fact-data:first-child,
-.dark-theme .page-aside.app .app-nav .title,
-.dark-theme .page-aside.email .mail-nav .title,
 .dark-theme .block-transparent .header {
     border-color: #555;
 }
@@ -438,7 +447,8 @@
 
 .dark-theme .checkbox label::before,
 .dark-theme .radio label::before {
-    background-color: #000;
+    background-color: #000 !important;
+    border-color: #333 !important;
 }
 
 .dark-theme ul.timeline>li>.fa,
@@ -484,8 +494,30 @@
     color: white;
     background-image: linear-gradient(to bottom, #111111, #292929);
 }
-
 .dark-theme .well{
     background-color: #111;
     border-color: #0a0a0a;
 }
+.editormd-html-preview, .editormd-preview-container{background-color: transparent;}
+.markdown-body {color: #ddd;}
+@media (max-width: 767px) {
+  .dark-theme .page-aside.app div.content,
+  .dark-theme .page-aside.email div.content {
+    border-color: #000;
+  }
+  .dark-theme .page-aside.app .app-nav .compose,
+  .dark-theme .page-aside.email .mail-nav .compose{
+    background-color: transparent;
+    border-color: #000;
+  }
+}
+.dark-theme .page-aside.email .navbar-toggle,
+.dark-theme .page-aside.app .navbar-toggle {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+.dark-theme .alert-white{
+  background-image: linear-gradient(to bottom,#201f1f,#090909);
+  border-color: #000;
+  color: #eee;
+}
+.dark-theme img#captchaImage{filter: invert(1);margin-left: 1px;}

@@ -25,15 +25,15 @@ import (
 	"github.com/webx-top/echo"
 	"github.com/webx-top/echo/code"
 
-	"github.com/admpub/nging/v5/application/handler"
-	"github.com/admpub/nging/v5/application/library/backend"
-	"github.com/admpub/nging/v5/application/library/filemanager"
-	"github.com/admpub/nging/v5/application/model"
+	"github.com/coscms/webcore/library/backend"
+	"github.com/coscms/webcore/library/common"
+	"github.com/coscms/webcore/library/filemanager"
+	"github.com/coscms/webcore/model"
 )
 
 func Edit(ctx echo.Context) error {
 	var err error
-	user := handler.User(ctx)
+	user := backend.User(ctx)
 	if user == nil {
 		return ctx.NewError(code.Unauthenticated, `登录信息获取失败，请重新登录`)
 	}
@@ -58,16 +58,16 @@ func Edit(ctx echo.Context) error {
 		//旧密码
 		passwd := strings.TrimSpace(ctx.Form(`pass`))
 
-		passwd, err = backend.DecryptPassword(ctx, passwd)
+		passwd, err = backend.DecryptPassword(ctx, m.Username, passwd)
 		if err != nil {
 			return ctx.NewError(code.InvalidParameter, `旧密码解密失败: %v`, err).SetZone(`pass`)
 		}
 		if modifyPass {
-			newPass, err = backend.DecryptPassword(ctx, newPass)
+			newPass, err = backend.DecryptPassword(ctx, m.Username, newPass)
 			if err != nil {
 				return ctx.NewError(code.InvalidParameter, `新密码解密失败: %v`, err).SetZone(`newPass`)
 			}
-			confirmPass, err = backend.DecryptPassword(ctx, confirmPass)
+			confirmPass, err = backend.DecryptPassword(ctx, m.Username, confirmPass)
 			if err != nil {
 				return ctx.NewError(code.InvalidParameter, `您输入的确认密码解密失败: %v`, err).SetZone(`confirmPass`)
 			}
@@ -107,14 +107,14 @@ func Edit(ctx echo.Context) error {
 			err = m.UpdateFields(nil, set, `id`, user.Id)
 		}
 		if err == nil {
-			handler.SendOk(ctx, ctx.T(`修改成功`))
+			common.SendOk(ctx, ctx.T(`修改成功`))
 			m.Get(nil, `id`, user.Id)
 			m.SetSession()
-			return ctx.Redirect(handler.URLFor(`/user/edit`))
+			return ctx.Redirect(backend.URLFor(`/user/edit`))
 		}
 	}
 	ctx.Set(`needCheckU2F`, needCheckU2F)
-	return ctx.Render(`user/edit`, handler.Err(ctx, err))
+	return ctx.Render(`user/edit`, common.Err(ctx, err))
 }
 
 var onAutoCompletePath = []func(echo.Context) (bool, error){}
@@ -134,7 +134,7 @@ func FireAutoCompletePath(c echo.Context) (bool, error) {
 }
 
 func AutoCompletePath(ctx echo.Context) error {
-	user := handler.User(ctx)
+	user := backend.User(ctx)
 	if user == nil {
 		return ctx.NewError(code.Unauthenticated, `登录信息获取失败，请重新登录`)
 	}

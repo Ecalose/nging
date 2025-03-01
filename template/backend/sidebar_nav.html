@@ -1,25 +1,25 @@
 {{Strip}}
               {{- range $key, $nav := $.Get `leftNavigate` -}}
-              {{- if and $nav $nav.Display -}}
+              {{- if and $nav $nav.Display $nav.IsValid -}}
               <li>
                 <a href="javascript:;">
                   <i class="fa fa-{{$nav.Icon}} nav-icon"></i>
-                  <span>{{$nav.Name|$.T}}</span>
+                  <span>{{$nav.Name|$.T|UpperCaseFirst}}</span>
                   {{if $nav.Badge}}<sup class="badge badge-sm badge-danger">{{$nav.Badge}}</sup>{{end}}
                 </a>
                 <ul class="sub-menu from-left">
                   {{- range $k, $c := $nav.Children -}}
-                  {{- if $c.Display -}}
+                  {{- if and $c.Display $c.IsValid -}}
                   <li>
                     <a{{if eq $c.Target `ajax`}} href="javascript:;" data-ajax-url="{{BackendURL}}/{{$nav.Action}}{{if $c.Action}}/{{$c.Action}}{{end}}"{{else}} href="{{BackendURL}}/{{$nav.Action}}{{if $c.Action}}/{{$c.Action}}{{end}}"{{if $c.Target}} target="{{$c.Target}}"{{else}} data-pjax="#main-container" data-keepjs="true" data-marknav="left"{{end}}{{end}}{{range $ai,$av:=$c.Attributes}} {{$av.K|ToHTMLAttr}}="{{$av.V}}"{{end}}>
                       {{- if eq $c.Icon "plus"}}
                       <span class="label label-primary pull-right">+</span>
                       {{- else if eq $c.Target "_blank"}}
-                      <span class="pull-right" title="{{"新窗口打开"|$.T}}">
+                      <span class="pull-right" title="{{`新窗口打开`|$.T}}">
                         <i class="fa fa-mail-forward"></i>
                       </span>
                       {{end -}}
-                      {{$c.Name|$.T}}
+                      {{$c.Name|$.T|UpperCaseFirst}}
                       {{if $c.Badge}}<sup class="badge badge-sm badge-danger">{{$c.Badge}}</sup>{{end}}
                     </a>
                   </li>

@@ -30,26 +30,22 @@ import (
 
 	_ "github.com/admpub/bindata/v3"
 	"github.com/admpub/log"
-	"github.com/admpub/nging/v5/application/cmd"
+	_ "github.com/admpub/nging/v5/application"
 	_ "github.com/admpub/nging/v5/application/ico"
-	_ "github.com/admpub/nging/v5/upgrade"
 
-	//"github.com/admpub/nging/v5/application/library/loader"
 	"github.com/webx-top/com"
 
 	//register
 
-	_ "github.com/admpub/nging/v5/application"
-	_ "github.com/admpub/nging/v5/application/initialize/manager"
-	"github.com/admpub/nging/v5/application/library/buildinfo"
-	"github.com/admpub/nging/v5/application/library/module"
-	_ "github.com/admpub/nging/v5/application/library/sqlite"
-
-	"github.com/admpub/nging/v5/application/version"
+	"github.com/coscms/webcore"
+	"github.com/coscms/webcore/library/buildinfo"
+	"github.com/coscms/webcore/library/module"
+	"github.com/coscms/webcore/version"
 
 	// module
 	"github.com/admpub/nging/v5/application/handler/cloud"
 	"github.com/admpub/nging/v5/application/handler/task"
+
 	"github.com/nging-plugins/caddymanager"
 	"github.com/nging-plugins/collector"
 	"github.com/nging-plugins/dbmanager"
@@ -60,9 +56,6 @@ import (
 	"github.com/nging-plugins/servermanager"
 	"github.com/nging-plugins/sshmanager"
 	"github.com/nging-plugins/webauthn"
-
-	// oauth2server
-	_ "github.com/admpub/nging/v5/application/library/backend/oauth2server/initialize"
 )
 
 var (
@@ -72,7 +65,7 @@ var (
 	CLOUD_GOX  string
 	COMMIT     string
 	LABEL      = `dev` //beta/alpha/stable
-	VERSION    = `5.2.7`
+	VERSION    = `5.2.8`
 	PACKAGE    = `free`
 
 	schemaVer = version.DBSCHEMA //数据表结构版本
@@ -81,9 +74,6 @@ var (
 func main() {
 	log.SetEmoji(com.IsMac)
 	defer log.Close()
-	// if err := loader.LoadPlugins(); err != nil {
-	// 	panic(err)
-	// }
 	buildinfo.New(
 		buildinfo.Time(BUILD_TIME),
 		buildinfo.OS(BUILD_OS),
@@ -98,12 +88,7 @@ func main() {
 	if com.FileExists(`config/install.sql`) {
 		com.Rename(`config/install.sql`, `config/install.sql.`+time.Now().Format(`20060102150405.000`))
 	}
-	module.Register(modules...)
-	exec()
-}
-
-func exec() {
-	cmd.Execute()
+	webcore.Start(modules...)
 }
 
 var modules = []module.IModule{

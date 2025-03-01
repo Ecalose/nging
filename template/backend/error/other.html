@@ -1,6 +1,7 @@
 {{Extend "base"}}
 {{Block "description"}}{{$.Data.title}}{{/Block}}
 {{Block "title"}}{{$.Data.title}}{{/Block}}
+{{Block "themeColor"}}#26262E{{/Block}}
 {{Block "bodyAttr"}} class="texture"{{/Block}}
 {{Block "main"}}
 <div id="cl-wrapper" class="error-container">
@@ -10,7 +11,7 @@
 		<h3 class="text-center">Would you like to go <a href="/">home</a>?</h3>
 	</div>
 	<div class="text-center copy">
-		<a href="https://github.com/admpub/nging" target="_blank">&copy; {{Now.Year}} {{Version}}</a>
+		<a href="{{OfficialHomepage}}" target="_blank">&copy; {{Now.Year}} {{Version}}</a>
 	</div>
 </div>
 {{/Block}}

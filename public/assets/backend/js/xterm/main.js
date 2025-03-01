@@ -1,5 +1,5 @@
 applyTerminalCommonAddon();
-var term, socket;
+var term, socket, routePrefix = getURLPathPrefix();
 var terminalContainer = document.getElementById('terminal-container'),
   actionElements = {
     findText: document.getElementById('find-text'),
@@ -29,7 +29,8 @@ var id = getQueryStringByName("id"), urlPrefix = getQueryStringByName("urlPrefix
   user = getQueryStringByName("user"), password = getQueryStringByName("password"),
   casename = getQueryStringByName("name");
 
-if (hostname) document.title = hostname + ' - ' + document.title;
+if(routePrefix && !urlPrefix.startsWith(routePrefix)) urlPrefix = routePrefix+urlPrefix;
+if(hostname) document.title = hostname + ' - ' + document.title;
 
 function toggleLogin() {
   var loginEl = document.getElementById("login"), optionsEl = document.getElementById("options");
@@ -99,16 +100,16 @@ function makeFullUrl() {
   var url = wsProtocol + "//" + document.location.host + urlPrefix + "/" + protocol + "?";
   switch (protocol) {
     case "replay":
-      url += "file=" + file + "&user=" + user
+      url += "file=" + file + "&user=" + encodeURIComponent(user)
       break;
     case "ssh_exec":
-      url += "dump_file=" + file + "&hostname=" + hostname + "&port=" + port + "&user=" + user + "&cmd=" + cmd
+      url += "dump_file=" + file + "&hostname=" + hostname + "&port=" + port + "&user=" + encodeURIComponent(user) + "&cmd=" + encodeURIComponent(cmd)
       break;
     default:
-      url += "hostname=" + hostname + "&port=" + port + "&user=" + user
+      url += "hostname=" + hostname + "&port=" + port + "&user=" + encodeURIComponent(user)
   }
   if (id) url += '&id=' + id;
-  else if (password) url += '&password=' + password;
+  else if (password) url += '&password=' + encodeURIComponent(password);
   if (is_debug) url += '&debug=' + is_debug;
   return url;
 }
